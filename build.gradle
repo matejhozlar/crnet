@@ -85,11 +85,19 @@ publishing {
     publications {
         register('mavenJava', MavenPublication) {
             from components.java
+            groupId = project.mod_group_id
+            artifactId = project.mod_id
+            version = project.mod_version
         }
     }
     repositories {
         maven {
-            url "file://${project.projectDir}/repo"
+            name = "Gitea"
+            url = "https://gitea.matejhoz.com/api/packages/Createrington/maven"
+            credentials {
+                username = findProperty("giteaUser") ?: System.getenv("GITEA_USER")
+                password = findProperty("giteaToken") ?: System.getenv("GITEA_TOKEN")
+            }
         }
     }
 }

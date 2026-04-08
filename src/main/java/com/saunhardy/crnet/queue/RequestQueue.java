@@ -6,6 +6,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -20,16 +22,9 @@ import java.util.concurrent.TimeUnit;
  * <h3>Design</h3>
  * <ul>
  *   <li>Single-thread executor (FIFO ordering, no per-mod priority)</li>
- *   <li>Bounded queue — capacity configured via {@link CrNetConfig#getQueueCapacity()}</li>
+ *   <li>Bounded queue — capacity configured via {@code network.queueCapacity}</li>
  *   <li>Rejection policy: log-and-drop (preferred over blocking the server thread)</li>
  * </ul>
- *
- * <h3>Usage</h3>
- * <pre>{@code
- * CrNet.getRequestQueue().submit(() -> {
- *     client.post("/presence/update", body, Void.class);
- * });
- * }</pre>
  */
 public class RequestQueue {
 
@@ -37,8 +32,9 @@ public class RequestQueue {
 
     private final ExecutorService executor;
 
-    public RequestQueue(CrNetConfig config) {
-        BlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(config.getQueueCapacity());
+    public RequestQueue() {
+        int capacity = CrNetConfig.QUEUE_CAPACITY.get();
+        BlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(capacity);
         this.executor = new ThreadPoolExecutor(
                 1, 1,
                 0L, TimeUnit.MILLISECONDS,
@@ -53,13 +49,41 @@ public class RequestQueue {
     }
 
     /**
-     * Submits a task to the shared request queue.
+     * Submits a fire-and-forget task to the shared request queue.
      * If the queue is full the task is silently dropped and a warning is logged.
      *
-     * @param task the request to execute (typically a lambda calling {@link com.saunhardy.crnet.http.BackendHttpClient})
+     * @param task the request to execute
      */
     public void submit(Runnable task) {
         executor.submit(task);
+    }
+
+    /**
+     * Submits a task that returns a result.
+     * <p>
+     * The returned {@link CompletableFuture} completes normally with the result,
+     * or completes exceptionally if the task throws. If the queue is full, the
+     * future completes exceptionally with a message indicating the rejection.
+     *
+     * @param task the callable to execute
+     * @param <T>  the result type
+     * @return a future that completes with the task result
+     */
+    public <T> CompletableFuture<T> submit(Callable<T> task) {
+        CompletableFuture<T> future = new CompletableFuture<>();
+        try {
+            executor.submit(() -> {
+                try {
+                    future.complete(task.call());
+                } catch (Exception e) {
+                    future.completeExceptionally(e);
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            LOGGER.warn("CrNet request queue full — rejecting callable task");
+            future.completeExceptionally(new RuntimeException("Request queue full — task rejected"));
+        }
+        return future;
     }
 
     /**

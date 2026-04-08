@@ -2,11 +2,18 @@ package com.saunhardy.crnet;
 
 import com.saunhardy.crnet.auth.TokenManager;
 import com.saunhardy.crnet.config.CrNetConfig;
+import com.saunhardy.crnet.http.BackendHttpClient;
+import com.saunhardy.crnet.presence.HeartbeatService;
 import com.saunhardy.crnet.queue.RequestQueue;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,24 +24,52 @@ public class CrNet {
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     private static TokenManager tokenManager;
+    private static BackendHttpClient httpClient;
     private static RequestQueue requestQueue;
+    private static HeartbeatService heartbeatService;
 
     public CrNet(IEventBus modEventBus, ModContainer modContainer) {
+        modContainer.registerConfig(ModConfig.Type.SERVER, CrNetConfig.SPEC);
         modEventBus.addListener(this::commonSetup);
+        NeoForge.EVENT_BUS.register(this);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        CrNetConfig config = CrNetConfig.load();
-        tokenManager = new TokenManager(config);
-        requestQueue = new RequestQueue(config);
-        LOGGER.info("CrNet initialised (baseUrl={})", config.getBaseUrl());
+        tokenManager = new TokenManager();
+        httpClient = new BackendHttpClient(tokenManager);
+        requestQueue = new RequestQueue();
+        heartbeatService = new HeartbeatService();
+        LOGGER.info("CrNet initialised (baseUrl={}, authMode={})",
+                CrNetConfig.BASE_URL.get(), CrNetConfig.AUTH_MODE.get());
+    }
+
+    @SubscribeEvent
+    public void onServerStarting(ServerStartingEvent event) {
+        if (heartbeatService != null) {
+            heartbeatService.start(event.getServer());
+        }
+    }
+
+    @SubscribeEvent
+    public void onServerStopping(ServerStoppingEvent event) {
+        LOGGER.info("Server stopping — shutting down CrNet");
+        if (heartbeatService != null) heartbeatService.shutdown();
+        if (requestQueue != null) requestQueue.shutdown();
     }
 
     public static TokenManager getTokenManager() {
         return tokenManager;
     }
 
+    public static BackendHttpClient getHttpClient() {
+        return httpClient;
+    }
+
     public static RequestQueue getRequestQueue() {
         return requestQueue;
+    }
+
+    public static HeartbeatService getHeartbeatService() {
+        return heartbeatService;
     }
 }
