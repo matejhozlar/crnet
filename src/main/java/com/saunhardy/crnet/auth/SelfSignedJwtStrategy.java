@@ -1,6 +1,5 @@
 package com.saunhardy.crnet.auth;
 
-import com.saunhardy.crnet.config.CRNetConfig;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.jetbrains.annotations.Nullable;
@@ -13,20 +12,24 @@ import java.util.UUID;
 /**
  * Generates an HS256 JWT locally on every call — no server round-trip required.
  * <p>
- * Ported from PresenceAPI's {@code ApiClient.generateJWT()}. Token generation is
- * cheap so no caching is needed. The {@code playerUuid} parameter is ignored
- * because this strategy produces server-level tokens.
+ * Token generation is cheap so no caching is needed. The {@code playerUuid}
+ * parameter is ignored because this strategy produces server-level tokens.
  */
-public class SelfSignedJwtStrategy implements AuthStrategy {
+class SelfSignedJwtStrategy implements AuthStrategy {
+
+    private final String secret;
+    private final int ttlSeconds;
+
+    SelfSignedJwtStrategy(String secret, int ttlSeconds) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalArgumentException("JWT secret must not be null or blank");
+        }
+        this.secret = secret;
+        this.ttlSeconds = ttlSeconds;
+    }
 
     @Override
     public String getToken(@Nullable UUID playerUuid) throws TokenException {
-        String secret = CRNetConfig.JWT_SECRET.get();
-        if (secret == null || secret.isBlank()) {
-            throw new TokenException("JWT secret is not configured (crnet-server.toml → auth.jwtSecret)");
-        }
-
-        int ttlSeconds = CRNetConfig.TOKEN_TTL_SECONDS.get();
         long nowMs = System.currentTimeMillis();
 
         try {
