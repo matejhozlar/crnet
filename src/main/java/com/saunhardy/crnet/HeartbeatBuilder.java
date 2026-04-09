@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 /**
@@ -28,6 +29,7 @@ import java.util.function.Supplier;
 public class HeartbeatBuilder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HeartbeatBuilder.class);
+    private static final AtomicInteger THREAD_COUNTER = new AtomicInteger(0);
 
     private final CRNetClient client;
     private String endpoint;
@@ -89,7 +91,7 @@ public class HeartbeatBuilder {
         }
 
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "crnet-heartbeat");
+            Thread t = new Thread(r, "crnet-heartbeat-" + THREAD_COUNTER.getAndIncrement());
             t.setDaemon(true);
             return t;
         });
@@ -97,7 +99,7 @@ public class HeartbeatBuilder {
         scheduler.scheduleAtFixedRate(() -> {
             try {
                 String payload = payloadSupplier.get();
-                client.internalPostAsync(endpoint, payload);
+                client.postAsync(endpoint, payload);
             } catch (Exception e) {
                 LOGGER.error("Failed to send heartbeat to {}: {}", endpoint, e.getMessage());
             }

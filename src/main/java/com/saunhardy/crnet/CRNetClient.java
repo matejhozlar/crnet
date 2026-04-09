@@ -1,5 +1,6 @@
 package com.saunhardy.crnet;
 
+import com.saunhardy.crnet.auth.AuthConfig;
 import com.saunhardy.crnet.auth.AuthStrategy;
 import com.saunhardy.crnet.auth.LoginEndpointAuthConfig;
 import com.saunhardy.crnet.auth.TokenManager;
@@ -143,17 +144,12 @@ public class CRNetClient {
         return new HeartbeatBuilder(this);
     }
 
-    // Package-private accessor for HeartbeatBuilder
-    CompletableFuture<Void> internalPostAsync(String path, String jsonBody) {
-        return postAsync(path, jsonBody);
-    }
-
     // ── Builder ─────────────────────────────────────────────────────────
 
     public static class Builder {
 
         private String baseUrl;
-        private Object authConfig = AuthStrategy.none();
+        private AuthConfig authConfig = AuthStrategy.none();
 
         /**
          * Sets the base URL for all requests made by this client.
@@ -166,22 +162,15 @@ public class CRNetClient {
         }
 
         /**
-         * Sets the auth strategy for this client.
+         * Sets the auth configuration for this client.
+         * <p>
+         * Accepts either an {@link AuthStrategy} (from static factories like
+         * {@link AuthStrategy#selfSignedJwt(String)}) or a {@link LoginEndpointAuthConfig}
+         * (from {@link AuthStrategy#loginEndpoint(String)}).
          *
-         * @param strategy an {@link AuthStrategy} instance (from static factories)
+         * @param config an {@link AuthConfig} instance
          */
-        public Builder auth(AuthStrategy strategy) {
-            this.authConfig = strategy;
-            return this;
-        }
-
-        /**
-         * Sets a deferred login-endpoint auth config. The real strategy is created
-         * at {@link #build()} time when the base URL and HTTP client are available.
-         *
-         * @param config a {@link LoginEndpointAuthConfig} from {@link AuthStrategy#loginEndpoint(String)}
-         */
-        public Builder auth(LoginEndpointAuthConfig config) {
+        public Builder auth(AuthConfig config) {
             this.authConfig = config;
             return this;
         }
@@ -208,8 +197,9 @@ public class CRNetClient {
                 strategy = loginConfig.create(sharedHttpClient, baseUrl);
             } else if (authConfig instanceof AuthStrategy authStrategy) {
                 strategy = authStrategy;
-            } else {
-                strategy = AuthStrategy.none();
+            }  else {
+                // Unreachable — AuthConfig is sealed to AuthStrategy and LoginEndpointAuthConfig
+                throw new AssertionError("Unknown AuthConfig type: " + authConfig.getClass());
             }
 
             TokenManager tokenManager = new TokenManager(strategy);

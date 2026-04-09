@@ -15,7 +15,7 @@ import java.util.UUID;
  *   <li>{@link #none()} — no authentication</li>
  * </ul>
  */
-public interface AuthStrategy {
+public non-sealed interface AuthStrategy extends AuthConfig {
 
     /**
      * Returns a valid bearer token string (without the {@code "Bearer "} prefix).
@@ -52,6 +52,9 @@ public interface AuthStrategy {
      * @param ttlSeconds token time-to-live in seconds
      */
     static AuthStrategy selfSignedJwt(String secret, int ttlSeconds) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalArgumentException("JWT secret must not be null or blank");
+        }
         return new SelfSignedJwtStrategy(secret, ttlSeconds);
     }
 

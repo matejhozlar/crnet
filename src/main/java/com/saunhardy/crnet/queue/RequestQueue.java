@@ -47,16 +47,6 @@ public class RequestQueue {
     }
 
     /**
-     * Submits a fire-and-forget task to the shared request queue.
-     * If the queue is full the task is silently dropped and a warning is logged.
-     *
-     * @param task the request to execute
-     */
-    public void submit(Runnable task) {
-        executor.submit(task);
-    }
-
-    /**
      * Submits a task that returns a result.
      * <p>
      * The returned {@link CompletableFuture} completes normally with the result,

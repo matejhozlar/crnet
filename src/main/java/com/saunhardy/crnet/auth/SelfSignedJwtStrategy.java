@@ -15,22 +15,21 @@ import java.util.UUID;
  * Token generation is cheap so no caching is needed. The {@code playerUuid}
  * parameter is ignored because this strategy produces server-level tokens.
  */
-public class SelfSignedJwtStrategy implements AuthStrategy {
+class SelfSignedJwtStrategy implements AuthStrategy {
 
     private final String secret;
     private final int ttlSeconds;
 
-    public SelfSignedJwtStrategy(String secret, int ttlSeconds) {
+    SelfSignedJwtStrategy(String secret, int ttlSeconds) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalArgumentException("JWT secret must not be null or blank");
+        }
         this.secret = secret;
         this.ttlSeconds = ttlSeconds;
     }
 
     @Override
     public String getToken(@Nullable UUID playerUuid) throws TokenException {
-        if (secret == null || secret.isBlank()) {
-            throw new TokenException("JWT secret is not configured");
-        }
-
         long nowMs = System.currentTimeMillis();
 
         try {

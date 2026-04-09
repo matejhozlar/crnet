@@ -10,7 +10,7 @@ import java.util.UUID;
  * When this strategy is active, {@link com.saunhardy.crnet.http.BackendHttpClient}
  * skips the {@code Authorization} header entirely.
  */
-public class NoneAuthStrategy implements AuthStrategy {
+class NoneAuthStrategy implements AuthStrategy {
 
     @Override
     public @Nullable String getToken(@Nullable UUID playerUuid) {

@@ -9,7 +9,7 @@ import java.net.http.HttpClient;
  * {@link LoginEndpointStrategy} by {@link com.saunhardy.crnet.CRNetClient.Builder#build()},
  * which supplies the {@code HttpClient} and {@code baseUrl}.
  */
-public class LoginEndpointAuthConfig {
+public final class LoginEndpointAuthConfig implements AuthConfig {
 
     private final String loginPath;
 
