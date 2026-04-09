@@ -101,7 +101,7 @@ publishing {
         }
         maven {
             name = "GitHubPackages"
-            url = "https://maven.pkg.github.com/Createrington/crnet"
+            url = "https://maven.pkg.github.com/matejhozlar/crnet"
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")
