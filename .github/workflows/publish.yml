@@ -50,5 +50,5 @@ jobs:
       - name: Publish to GitHub Packages
         run: ./gradlew publish -Pmod_version=${{ steps.version.outputs.value }}
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          GH_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
