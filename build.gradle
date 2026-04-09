@@ -92,14 +92,6 @@ publishing {
     }
     repositories {
         maven {
-            name = "Gitea"
-            url = "https://gitea.matejhoz.com/api/packages/Createrington/maven"
-            credentials {
-                username = findProperty("giteaUser") ?: System.getenv("GITEA_USER")
-                password = findProperty("giteaToken") ?: System.getenv("GITEA_TOKEN")
-            }
-        }
-        maven {
             name = "GitHubPackages"
             url = "https://maven.pkg.github.com/matejhozlar/crnet"
             credentials {
