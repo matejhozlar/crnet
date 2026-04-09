@@ -32,6 +32,12 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
 
+      - name: Publish to GitHub Packages
+        run: ./gradlew publish -Pmod_version=${{ steps.version.outputs.value }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
       - name: Publish to CurseForge
         uses: Kir-Antipov/mc-publish@v3.3
         with:
@@ -46,9 +52,3 @@ jobs:
 
           curseforge-id: 1509069
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
-
-      - name: Publish to GitHub Packages
-        run: ./gradlew publish -Pmod_version=${{ steps.version.outputs.value }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
