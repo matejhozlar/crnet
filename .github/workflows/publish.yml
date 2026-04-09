@@ -2,6 +2,15 @@ name: Publish
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_maven:
+        description: 'Push to Maven repo'
+        type: boolean
+        default: true
+      publish_curseforge:
+        description: 'Publish to CurseForge'
+        type: boolean
+        default: true
 
 jobs:
   publish:
@@ -32,9 +41,11 @@ jobs:
         run: ./gradlew build
 
       - name: Publish artifacts
+        if: ${{ inputs.publish_maven }}
         run: ./gradlew publish
 
       - name: Push to Maven repo
+        if: ${{ inputs.publish_maven }}
         run: |
           git clone https://x-access-token:${{ secrets.MAVEN_REPO_TOKEN }}@github.com/matejhozlar/maven.git maven-repo
           cp -r build/maven-publish/. maven-repo/
@@ -46,6 +57,7 @@ jobs:
           git push
 
       - name: Publish to CurseForge
+        if: ${{ inputs.publish_curseforge }}
         uses: Kir-Antipov/mc-publish@v3.3
         with:
           version: ${{ steps.version.outputs.value }}
