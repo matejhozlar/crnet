@@ -22,8 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Authenticates by POSTing player credentials to a login endpoint and caching
  * the server-issued JWT per player UUID.
  * <p>
- * Ported from the Currency mod's {@code MoneyCommands.getOrFetchToken()} pattern.
- * Tokens are cached for ~9 minutes (configurable) and evicted periodically.
+ * Tokens are cached for ~9 minutes and evicted periodically.
  */
 public class LoginEndpointStrategy implements AuthStrategy {
 
@@ -39,9 +38,13 @@ public class LoginEndpointStrategy implements AuthStrategy {
     private volatile long lastCleanupTime = 0;
 
     private final HttpClient httpClient;
+    private final String baseUrl;
+    private final String loginPath;
 
-    public LoginEndpointStrategy(HttpClient httpClient) {
+    public LoginEndpointStrategy(HttpClient httpClient, String baseUrl, String loginPath) {
         this.httpClient = httpClient;
+        this.baseUrl = baseUrl;
+        this.loginPath = loginPath;
     }
 
     @Override
@@ -71,7 +74,7 @@ public class LoginEndpointStrategy implements AuthStrategy {
     }
 
     private String fetchToken(UUID playerUuid) throws TokenException {
-        String url = UrlUtils.safeJoin(CRNetConfig.BASE_URL.get(), CRNetConfig.LOGIN_ENDPOINT.get());
+        String url = UrlUtils.safeJoin(baseUrl, loginPath);
 
         try {
             String body = GSON.toJson(Map.of("uuid", playerUuid.toString()));

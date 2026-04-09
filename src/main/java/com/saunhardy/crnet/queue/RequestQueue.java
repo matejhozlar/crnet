@@ -1,6 +1,5 @@
 package com.saunhardy.crnet.queue;
 
-import com.saunhardy.crnet.config.CRNetConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,14 +14,14 @@ import java.util.concurrent.TimeUnit;
 /**
  * Shared, bounded request queue for all CRNet consumers.
  * <p>
- * Replaces the per-mod single-threaded executor pattern used in PresenceAPI and
- * the Currency mod. All mods share one executor so the total number of concurrent
- * backend connections stays bounded regardless of how many mods are loaded.
+ * All {@link com.saunhardy.crnet.CRNetClient} instances share one executor so the
+ * total number of concurrent backend connections stays bounded regardless of how
+ * many clients are active.
  *
  * <h3>Design</h3>
  * <ul>
- *   <li>Single-thread executor (FIFO ordering, no per-mod priority)</li>
- *   <li>Bounded queue — capacity configured via {@code network.queueCapacity}</li>
+ *   <li>Single-thread executor (FIFO ordering, no per-client priority)</li>
+ *   <li>Bounded queue — capacity provided at construction time</li>
  *   <li>Rejection policy: log-and-drop (preferred over blocking the server thread)</li>
  * </ul>
  */
@@ -32,8 +31,7 @@ public class RequestQueue {
 
     private final ExecutorService executor;
 
-    public RequestQueue() {
-        int capacity = CRNetConfig.QUEUE_CAPACITY.get();
+    public RequestQueue(int capacity) {
         BlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(capacity);
         this.executor = new ThreadPoolExecutor(
                 1, 1,

@@ -19,7 +19,7 @@ import java.time.Duration;
 import java.util.UUID;
 
 /**
- * Standardised HTTP client for communicating with the Createrington backend.
+ * Standardised HTTP client for communicating with a backend API.
  * <p>
  * Uses {@link java.net.http.HttpClient} with <strong>HTTP/1.1 explicitly
  * enforced</strong> — HTTP/2 upgrade must be treated as a deliberate breaking
@@ -38,10 +38,12 @@ public class BackendHttpClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(BackendHttpClient.class);
     private static final Gson GSON = new Gson();
 
+    private final String baseUrl;
     private final TokenManager tokenManager;
     private final HttpClient httpClient;
 
-    public BackendHttpClient(TokenManager tokenManager, HttpClient httpClient) {
+    public BackendHttpClient(String baseUrl, TokenManager tokenManager, HttpClient httpClient) {
+        this.baseUrl = baseUrl;
         this.tokenManager = tokenManager;
         this.httpClient = httpClient;
     }
@@ -172,13 +174,16 @@ public class BackendHttpClient {
 
     private HttpRequest buildRequest(String path, String method, @Nullable String body,
                                      @Nullable UUID playerUuid) throws TokenException {
-        String url = UrlUtils.safeJoin(CRNetConfig.BASE_URL.get(), path);
+        String url = UrlUtils.safeJoin(baseUrl, path);
         String token = tokenManager.getToken(playerUuid);
 
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
-                .header("Authorization", "Bearer " + token)
                 .timeout(Duration.ofMillis(CRNetConfig.REQUEST_TIMEOUT_MS.get()));
+
+        if (token != null) {
+            builder.header("Authorization", "Bearer " + token);
+        }
 
         if ("POST".equals(method)) {
             builder.header("Content-Type", "application/json");
