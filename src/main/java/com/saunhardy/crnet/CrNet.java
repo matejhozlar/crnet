@@ -17,6 +17,9 @@ import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.http.HttpClient;
+import java.time.Duration;
+
 @Mod(CrNet.MOD_ID)
 public class CrNet {
 
@@ -35,10 +38,15 @@ public class CrNet {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        tokenManager = new TokenManager();
-        httpClient = new BackendHttpClient(tokenManager);
+        HttpClient sharedHttpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)   // explicit — do not change without a version bump
+                .connectTimeout(Duration.ofMillis(CrNetConfig.CONNECT_TIMEOUT_MS.get()))
+                .build();
+
+        tokenManager = new TokenManager(sharedHttpClient);
+        httpClient = new BackendHttpClient(tokenManager, sharedHttpClient);
         requestQueue = new RequestQueue();
-        heartbeatService = new HeartbeatService();
+        heartbeatService = new HeartbeatService(requestQueue, httpClient);
         LOGGER.info("CrNet initialised (baseUrl={}, authMode={})",
                 CrNetConfig.BASE_URL.get(), CrNetConfig.AUTH_MODE.get());
     }

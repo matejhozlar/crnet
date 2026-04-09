@@ -40,11 +40,8 @@ public class LoginEndpointStrategy implements AuthStrategy {
 
     private final HttpClient httpClient;
 
-    public LoginEndpointStrategy() {
-        this.httpClient = HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_1_1)
-                .connectTimeout(Duration.ofMillis(CrNetConfig.CONNECT_TIMEOUT_MS.get()))
-                .build();
+    public LoginEndpointStrategy(HttpClient httpClient) {
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -116,7 +113,6 @@ public class LoginEndpointStrategy implements AuthStrategy {
             if (expiry < now) {
                 tokenCache.remove(uuid);
                 tokenExpiration.remove(uuid);
-                tokenLocks.remove(uuid);
             }
         });
     }

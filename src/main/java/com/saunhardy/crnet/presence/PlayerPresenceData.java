@@ -141,6 +141,9 @@ public class PlayerPresenceData {
         public Builder ipAddress(@Nullable String ipAddress) { this.ipAddress = ipAddress; return this; }
 
         public PlayerPresenceData build() {
+            if (minecraftUsername == null) throw new IllegalStateException("minecraftUsername is required");
+            if (uuid == null) throw new IllegalStateException("uuid is required");
+            if (state == null) throw new IllegalStateException("state is required");
             return new PlayerPresenceData(this);
         }
     }

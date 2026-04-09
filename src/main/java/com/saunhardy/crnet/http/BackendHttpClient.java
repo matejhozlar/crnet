@@ -41,12 +41,9 @@ public class BackendHttpClient {
     private final TokenManager tokenManager;
     private final HttpClient httpClient;
 
-    public BackendHttpClient(TokenManager tokenManager) {
+    public BackendHttpClient(TokenManager tokenManager, HttpClient httpClient) {
         this.tokenManager = tokenManager;
-        this.httpClient = HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_1_1)   // explicit — do not change without a version bump
-                .connectTimeout(Duration.ofMillis(CrNetConfig.CONNECT_TIMEOUT_MS.get()))
-                .build();
+        this.httpClient = httpClient;
     }
 
     // ── POST ─────────────────────────────────────────────────────────────
@@ -150,11 +147,12 @@ public class BackendHttpClient {
 
             int status = response.statusCode();
 
-            // 401: invalidate token and retry once
+            // 401: invalidate token and retry once (does not consume the normal retry budget)
             if (status == 401 && !authRetried) {
                 authRetried = true;
                 tokenManager.invalidate(playerUuid);
                 LOGGER.debug("Got 401, invalidated token and retrying (playerUuid={})", playerUuid);
+                attempt--;
                 continue;
             }
 
@@ -180,10 +178,10 @@ public class BackendHttpClient {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Authorization", "Bearer " + token)
-                .header("Content-Type", "application/json")
                 .timeout(Duration.ofMillis(CrNetConfig.REQUEST_TIMEOUT_MS.get()));
 
         if ("POST".equals(method)) {
+            builder.header("Content-Type", "application/json");
             builder.POST(HttpRequest.BodyPublishers.ofString(body != null ? body : "{}"));
         } else {
             builder.GET();
@@ -214,7 +212,7 @@ public class BackendHttpClient {
 
     private void sleepBackoff(int attempt) {
         try {
-            Thread.sleep(1_000L * (attempt + 1));
+            Thread.sleep(1_000L * (1L << attempt));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

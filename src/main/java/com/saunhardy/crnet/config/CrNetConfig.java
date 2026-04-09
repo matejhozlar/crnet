@@ -2,6 +2,8 @@ package com.saunhardy.crnet.config;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
+import java.util.List;
+
 /**
  * Shared configuration for all CrNet components.
  * <p>
@@ -10,7 +12,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  */
 public class CrNetConfig {
 
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
     // ── Network ──────────────────────────────────────────────────────────
     public static final ModConfigSpec.ConfigValue<String> BASE_URL;
@@ -61,7 +63,7 @@ public class CrNetConfig {
 
         AUTH_MODE = BUILDER
                 .comment("Auth strategy: 'self_signed' (PresenceAPI-style HS256 JWT) or 'login_endpoint' (server-issued token)")
-                .define("authMode", "self_signed");
+                .defineInList("authMode", "self_signed", List.of("self_signed", "login_endpoint"));
 
         JWT_SECRET = BUILDER
                 .comment("Secret key for self-signed JWTs (used when authMode = self_signed)")

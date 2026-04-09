@@ -5,6 +5,8 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.http.HttpClient;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -27,10 +29,15 @@ public class TokenManager {
 
     private final AuthStrategy strategy;
 
-    public TokenManager() {
+    private static final List<String> VALID_AUTH_MODES = List.of("self_signed", "login_endpoint");
+
+    public TokenManager(HttpClient httpClient) {
         String mode = CrNetConfig.AUTH_MODE.get();
+        if (!VALID_AUTH_MODES.contains(mode)) {
+            LOGGER.warn("Unknown auth mode '{}', falling back to 'self_signed'. Valid values: {}", mode, VALID_AUTH_MODES);
+        }
         if ("login_endpoint".equals(mode)) {
-            this.strategy = new LoginEndpointStrategy();
+            this.strategy = new LoginEndpointStrategy(httpClient);
             LOGGER.info("TokenManager using login_endpoint auth strategy");
         } else {
             this.strategy = new SelfSignedJwtStrategy();

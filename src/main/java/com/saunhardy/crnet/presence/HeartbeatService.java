@@ -2,8 +2,9 @@ package com.saunhardy.crnet.presence;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.saunhardy.crnet.CrNet;
 import com.saunhardy.crnet.config.CrNetConfig;
+import com.saunhardy.crnet.http.BackendHttpClient;
+import com.saunhardy.crnet.queue.RequestQueue;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
@@ -26,9 +27,13 @@ public class HeartbeatService {
     private static final Logger LOGGER = LoggerFactory.getLogger(HeartbeatService.class);
 
     private final ScheduledExecutorService scheduler;
+    private final RequestQueue requestQueue;
+    private final BackendHttpClient httpClient;
     private volatile MinecraftServer server;
 
-    public HeartbeatService() {
+    public HeartbeatService(RequestQueue requestQueue, BackendHttpClient httpClient) {
+        this.requestQueue = requestQueue;
+        this.httpClient = httpClient;
         this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "crnet-heartbeat");
             t.setDaemon(true);
@@ -75,9 +80,9 @@ public class HeartbeatService {
             }
 
             String heartbeatPath = CrNetConfig.HEARTBEAT_PATH.get();
-            CrNet.getRequestQueue().submit(() -> {
+            requestQueue.submit(() -> {
                 try {
-                    CrNet.getHttpClient().postFireAndForget(heartbeatPath, payload.toString());
+                    httpClient.postFireAndForget(heartbeatPath, payload.toString());
                     LOGGER.debug("Heartbeat sent ({} players)", players.size());
                 } catch (Exception e) {
                     LOGGER.error("Failed to send heartbeat: {}", e.getMessage());
