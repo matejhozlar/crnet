@@ -15,8 +15,11 @@ public final class UrlUtils {
      * @return the joined URL string
      */
     public static String safeJoin(String base, String path) {
-        if (!base.endsWith("/")) base += "/";
         if (path.startsWith("/")) path = path.substring(1);
+        if (path.isEmpty()) {
+            return base.endsWith("/") ? base.substring(0, base.length() - 1) : base;
+        }
+        if (!base.endsWith("/")) base += "/";
         return base + path;
     }
 }
