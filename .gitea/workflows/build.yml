@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - neoforge-1.21.1
 
 jobs:
   build:
