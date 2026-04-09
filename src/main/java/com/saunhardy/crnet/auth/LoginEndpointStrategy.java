@@ -73,6 +73,14 @@ public class LoginEndpointStrategy implements AuthStrategy {
         LOGGER.debug("Token invalidated for player {}", playerUuid);
     }
 
+    @Override
+    public void invalidateAll() {
+        tokenCache.clear();
+        tokenExpiration.clear();
+        tokenLocks.clear();
+        LOGGER.debug("All tokens invalidated");
+    }
+
     private String fetchToken(UUID playerUuid) throws TokenException {
         String url = UrlUtils.safeJoin(baseUrl, loginPath);
 

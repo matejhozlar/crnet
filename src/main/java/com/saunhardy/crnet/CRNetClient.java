@@ -133,6 +133,14 @@ public class CRNetClient {
         tokenManager.invalidate(playerUuid);
     }
 
+    /**
+     * Releases this client's resources (token cache, etc.).
+     * The client must not be used after calling this method.
+     */
+    public void close() {
+        tokenManager.invalidateAll();
+    }
+
     // ── Heartbeat ───────────────────────────────────────────────────────
 
     /**

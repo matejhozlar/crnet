@@ -61,4 +61,12 @@ public class TokenManager {
         strategy.invalidate(playerUuid);
         LOGGER.debug("Token invalidated (playerUuid={})", playerUuid);
     }
+
+    /**
+     * Clears all cached tokens, forcing re-authentication on subsequent calls.
+     */
+    public void invalidateAll() {
+        strategy.invalidateAll();
+        LOGGER.debug("All tokens invalidated");
+    }
 }
