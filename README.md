@@ -5,6 +5,8 @@ Shared backend HTTP client library for Createrington NeoForge mods.
 Provides JWT authentication, a standardised HTTP client, and a bounded shared
 request queue so individual mods do not need to implement their own networking layer.
 
+📖 **[Read the full wiki](https://gitea.matejhoz.com/Createrington/crnet/wiki)** for in-depth documentation, guides, and API reference.
+
 ## Features
 
 - **`CRNetClient`** — multi-instance API client with a fluent builder; each consuming mod creates its own instance
@@ -33,7 +35,7 @@ In the `dependencies` block of your `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation "com.saunhardy:crnet:2.0.0"
+    implementation "com.saunhardy:crnet:2.1.0"
 }
 ```
 
@@ -171,6 +173,20 @@ com.saunhardy.crnet
 - Java 21
 - Minecraft 1.21.1
 - NeoForge 21.1.217+
+
+## Documentation
+
+For detailed documentation, visit the [CRNet Wiki](https://gitea.matejhoz.com/Createrington/crnet/wiki):
+
+- [Getting Started](https://gitea.matejhoz.com/Createrington/crnet/wiki/Getting-Started) — Installation and first steps
+- [Creating a Client](https://gitea.matejhoz.com/Createrington/crnet/wiki/Creating-a-Client) — Builder API and lifecycle
+- [Authentication](https://gitea.matejhoz.com/Createrington/crnet/wiki/Authentication) — Auth strategies and token management
+- [Making Requests](https://gitea.matejhoz.com/Createrington/crnet/wiki/Making-Requests) — POST, GET, and async patterns
+- [Heartbeats](https://gitea.matejhoz.com/Createrington/crnet/wiki/Heartbeats) — Periodic request scheduling
+- [Configuration](https://gitea.matejhoz.com/Createrington/crnet/wiki/Configuration) — Server config and tuning
+- [Error Handling](https://gitea.matejhoz.com/Createrington/crnet/wiki/Error-Handling) — Exceptions, retries, and failure modes
+- [Architecture](https://gitea.matejhoz.com/Createrington/crnet/wiki/Architecture) — Internals and design decisions
+- [API Reference](https://gitea.matejhoz.com/Createrington/crnet/wiki/API-Reference) — Full class and method reference
 
 ## Authors
 
