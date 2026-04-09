@@ -1,0 +1,46 @@
+name: Publish to Maven
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Get version
+        id: version
+        run: echo "value=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)" >> $GITHUB_OUTPUT
+
+      - name: Build with Gradle
+        run: ./gradlew build
+
+      - name: Publish artifacts
+        run: ./gradlew publish
+
+      - name: Push to Maven repo
+        run: |
+          git clone https://x-access-token:${{ secrets.MAVEN_REPO_TOKEN }}@github.com/matejhozlar/maven.git maven-repo
+          cp -r build/maven-publish/. maven-repo/
+          cd maven-repo
+          git config user.email "ci@createrington.com"
+          git config user.name "CI"
+          git add .
+          git diff --cached --quiet || git commit -m "publish crnet ${{ steps.version.outputs.value }}"
+          git push
