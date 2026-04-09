@@ -5,12 +5,12 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 import java.util.List;
 
 /**
- * Shared configuration for all CrNet components.
+ * Shared configuration for all CRNet components.
  * <p>
  * Registered as a {@code SERVER} config so values are read from
  * {@code crnet-server.toml} and are per-world on dedicated servers.
  */
-public class CrNetConfig {
+public class CRNetConfig {
 
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
@@ -35,7 +35,7 @@ public class CrNetConfig {
     public static final ModConfigSpec SPEC;
 
     static {
-        BUILDER.comment("CrNet — shared backend HTTP client configuration").push("network");
+        BUILDER.comment("CRNet — shared backend HTTP client configuration").push("network");
 
         BASE_URL = BUILDER
                 .comment("Base URL of the Createrington backend API")
@@ -98,5 +98,5 @@ public class CrNetConfig {
         SPEC = BUILDER.build();
     }
 
-    private CrNetConfig() {}
+    private CRNetConfig() {}
 }

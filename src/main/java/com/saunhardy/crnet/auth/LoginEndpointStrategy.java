@@ -3,7 +3,7 @@ package com.saunhardy.crnet.auth;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.saunhardy.crnet.config.CrNetConfig;
+import com.saunhardy.crnet.config.CRNetConfig;
 import com.saunhardy.crnet.util.UrlUtils;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -71,7 +71,7 @@ public class LoginEndpointStrategy implements AuthStrategy {
     }
 
     private String fetchToken(UUID playerUuid) throws TokenException {
-        String url = UrlUtils.safeJoin(CrNetConfig.BASE_URL.get(), CrNetConfig.LOGIN_ENDPOINT.get());
+        String url = UrlUtils.safeJoin(CRNetConfig.BASE_URL.get(), CRNetConfig.LOGIN_ENDPOINT.get());
 
         try {
             String body = GSON.toJson(Map.of("uuid", playerUuid.toString()));
@@ -79,7 +79,7 @@ public class LoginEndpointStrategy implements AuthStrategy {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Content-Type", "application/json")
-                    .timeout(Duration.ofMillis(CrNetConfig.REQUEST_TIMEOUT_MS.get()))
+                    .timeout(Duration.ofMillis(CRNetConfig.REQUEST_TIMEOUT_MS.get()))
                     .POST(HttpRequest.BodyPublishers.ofString(body))
                     .build();
 

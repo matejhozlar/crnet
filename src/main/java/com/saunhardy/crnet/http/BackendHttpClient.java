@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.saunhardy.crnet.auth.TokenException;
 import com.saunhardy.crnet.auth.TokenManager;
-import com.saunhardy.crnet.config.CrNetConfig;
+import com.saunhardy.crnet.config.CRNetConfig;
 import com.saunhardy.crnet.util.UrlUtils;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -118,7 +118,7 @@ public class BackendHttpClient {
     private HttpResponse<String> sendWithRetry(String method, String path,
                                                @Nullable String body,
                                                @Nullable UUID playerUuid) throws BackendException {
-        int maxRetries = CrNetConfig.MAX_RETRIES.get();
+        int maxRetries = CRNetConfig.MAX_RETRIES.get();
         boolean authRetried = false;
 
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
@@ -172,13 +172,13 @@ public class BackendHttpClient {
 
     private HttpRequest buildRequest(String path, String method, @Nullable String body,
                                      @Nullable UUID playerUuid) throws TokenException {
-        String url = UrlUtils.safeJoin(CrNetConfig.BASE_URL.get(), path);
+        String url = UrlUtils.safeJoin(CRNetConfig.BASE_URL.get(), path);
         String token = tokenManager.getToken(playerUuid);
 
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Authorization", "Bearer " + token)
-                .timeout(Duration.ofMillis(CrNetConfig.REQUEST_TIMEOUT_MS.get()));
+                .timeout(Duration.ofMillis(CRNetConfig.REQUEST_TIMEOUT_MS.get()));
 
         if ("POST".equals(method)) {
             builder.header("Content-Type", "application/json");

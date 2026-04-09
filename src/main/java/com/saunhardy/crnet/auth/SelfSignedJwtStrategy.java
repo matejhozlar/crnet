@@ -1,6 +1,6 @@
 package com.saunhardy.crnet.auth;
 
-import com.saunhardy.crnet.config.CrNetConfig;
+import com.saunhardy.crnet.config.CRNetConfig;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.jetbrains.annotations.Nullable;
@@ -21,12 +21,12 @@ public class SelfSignedJwtStrategy implements AuthStrategy {
 
     @Override
     public String getToken(@Nullable UUID playerUuid) throws TokenException {
-        String secret = CrNetConfig.JWT_SECRET.get();
+        String secret = CRNetConfig.JWT_SECRET.get();
         if (secret == null || secret.isBlank()) {
             throw new TokenException("JWT secret is not configured (crnet-server.toml → auth.jwtSecret)");
         }
 
-        int ttlSeconds = CrNetConfig.TOKEN_TTL_SECONDS.get();
+        int ttlSeconds = CRNetConfig.TOKEN_TTL_SECONDS.get();
         long nowMs = System.currentTimeMillis();
 
         try {
