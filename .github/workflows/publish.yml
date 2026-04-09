@@ -5,6 +5,7 @@ on:
 
 jobs:
   publish:
+    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     permissions:
       contents: read
