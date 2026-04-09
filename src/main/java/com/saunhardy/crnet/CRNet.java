@@ -52,6 +52,10 @@ public class CRNet {
     public void onServerStopping(ServerStoppingEvent event) {
         LOGGER.info("Server stopping — shutting down CRNet");
         if (requestQueue != null) requestQueue.shutdown();
+        if (sharedHttpClient != null) {
+            sharedHttpClient.close();
+            sharedHttpClient = null;
+        }
     }
 
     /**
