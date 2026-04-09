@@ -1,6 +1,6 @@
 package com.saunhardy.crnet.queue;
 
-import com.saunhardy.crnet.config.CrNetConfig;
+import com.saunhardy.crnet.config.CRNetConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +13,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Shared, bounded request queue for all CrNet consumers.
+ * Shared, bounded request queue for all CRNet consumers.
  * <p>
  * Replaces the per-mod single-threaded executor pattern used in PresenceAPI and
  * the Currency mod. All mods share one executor so the total number of concurrent
@@ -33,7 +33,7 @@ public class RequestQueue {
     private final ExecutorService executor;
 
     public RequestQueue() {
-        int capacity = CrNetConfig.QUEUE_CAPACITY.get();
+        int capacity = CRNetConfig.QUEUE_CAPACITY.get();
         BlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(capacity);
         this.executor = new ThreadPoolExecutor(
                 1, 1,
@@ -44,7 +44,7 @@ public class RequestQueue {
                     t.setDaemon(true);
                     return t;
                 },
-                (r, exec) -> LOGGER.warn("CrNet request queue full — dropping request")
+                (r, exec) -> LOGGER.warn("CRNet request queue full — dropping request")
         );
     }
 
@@ -80,7 +80,7 @@ public class RequestQueue {
                 }
             });
         } catch (java.util.concurrent.RejectedExecutionException e) {
-            LOGGER.warn("CrNet request queue full — rejecting callable task");
+            LOGGER.warn("CRNet request queue full — rejecting callable task");
             future.completeExceptionally(new RuntimeException("Request queue full — task rejected"));
         }
         return future;
@@ -95,7 +95,7 @@ public class RequestQueue {
         try {
             if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
                 executor.shutdownNow();
-                LOGGER.warn("CrNet request queue did not drain cleanly within 5 s");
+                LOGGER.warn("CRNet request queue did not drain cleanly within 5 s");
             }
         } catch (InterruptedException e) {
             executor.shutdownNow();

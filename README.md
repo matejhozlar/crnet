@@ -1,4 +1,4 @@
-# CrNet
+# CRNet
 
 Shared backend HTTP client library for Createrington NeoForge mods.
 
@@ -10,11 +10,11 @@ request queue so individual mods do not need to implement their own networking l
 - `BackendHttpClient` — `java.net.http.HttpClient` wrapper with HTTP/1.1 enforced, exponential backoff retry, and automatic 401 handling
 - `TokenManager` — JWT cache with proactive refresh and thread-safe cross-mod sharing
 - `RequestQueue` — shared bounded executor (log-and-drop rejection policy)
-- `CrNetConfig` — unified config primitives (base URL, JWT secret, timeouts, retry settings)
+- `CRNetConfig` — unified config primitives (base URL, JWT secret, timeouts, retry settings)
 
 ## Usage
 
-Declare CrNet as a required dependency in your mod's `build.gradle`:
+Declare CRNet as a required dependency in your mod's `build.gradle`:
 
 ```groovy
 dependencies {
@@ -36,11 +36,11 @@ And in `neoforge.mods.toml`:
 Then access the shared client from any mod:
 
 ```java
-CrNet.getRequestQueue().submit(() -> {
+CRNet.getRequestQueue().submit(() -> {
     try {
         MyResponse resp = client.post("/your/endpoint", body, MyResponse.class);
     } catch (BackendException e) {
-        CrNet.LOGGER.error("Request failed: {}", e.getMessage());
+        CRNet.LOGGER.error("Request failed: {}", e.getMessage());
     }
 });
 ```
@@ -49,9 +49,9 @@ CrNet.getRequestQueue().submit(() -> {
 
 ```
 com.saunhardy.crnet
-├── CrNet.java                  Main mod class / static accessors
+├── CRNet.java                  Main mod class / static accessors
 ├── config/
-│   └── CrNetConfig.java        Config primitives (base URL, timeouts, etc.)
+│   └── CRNetConfig.java        Config primitives (base URL, timeouts, etc.)
 ├── auth/
 │   ├── TokenManager.java       JWT cache + auto-refresh
 │   └── TokenException.java

@@ -1,6 +1,6 @@
 package com.saunhardy.crnet.auth;
 
-import com.saunhardy.crnet.config.CrNetConfig;
+import com.saunhardy.crnet.config.CRNetConfig;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +15,7 @@ import java.util.UUID;
  * Delegates to the configured {@link AuthStrategy} (selected by the
  * {@code auth.authMode} config value). Thread-safe — multiple mods on the same
  * server instance share one {@code TokenManager} via
- * {@link com.saunhardy.crnet.CrNet#getTokenManager()}.
+ * {@link com.saunhardy.crnet.CRNet#getTokenManager()}.
  *
  * <h3>Auth modes</h3>
  * <ul>
@@ -32,7 +32,7 @@ public class TokenManager {
     private static final List<String> VALID_AUTH_MODES = List.of("self_signed", "login_endpoint");
 
     public TokenManager(HttpClient httpClient) {
-        String mode = CrNetConfig.AUTH_MODE.get();
+        String mode = CRNetConfig.AUTH_MODE.get();
         if (!VALID_AUTH_MODES.contains(mode)) {
             LOGGER.warn("Unknown auth mode '{}', falling back to 'self_signed'. Valid values: {}", mode, VALID_AUTH_MODES);
         }

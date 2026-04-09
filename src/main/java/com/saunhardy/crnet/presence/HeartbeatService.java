@@ -2,7 +2,7 @@ package com.saunhardy.crnet.presence;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.saunhardy.crnet.config.CrNetConfig;
+import com.saunhardy.crnet.config.CRNetConfig;
 import com.saunhardy.crnet.http.BackendHttpClient;
 import com.saunhardy.crnet.queue.RequestQueue;
 import net.minecraft.server.MinecraftServer;
@@ -48,7 +48,7 @@ public class HeartbeatService {
      */
     public void start(MinecraftServer server) {
         this.server = server;
-        int intervalMinutes = CrNetConfig.HEARTBEAT_INTERVAL_MINUTES.get();
+        int intervalMinutes = CRNetConfig.HEARTBEAT_INTERVAL_MINUTES.get();
         if (intervalMinutes <= 0) {
             LOGGER.info("Heartbeat disabled (interval = 0)");
             return;
@@ -74,12 +74,12 @@ public class HeartbeatService {
             payload.add("players", playersArray);
             payload.addProperty("timestamp", System.currentTimeMillis());
 
-            String serverId = CrNetConfig.SERVER_ID.get();
+            String serverId = CRNetConfig.SERVER_ID.get();
             if (serverId != null && !serverId.isEmpty()) {
                 payload.addProperty("serverId", serverId);
             }
 
-            String heartbeatPath = CrNetConfig.HEARTBEAT_PATH.get();
+            String heartbeatPath = CRNetConfig.HEARTBEAT_PATH.get();
             requestQueue.submit(() -> {
                 try {
                     httpClient.postFireAndForget(heartbeatPath, payload.toString());
