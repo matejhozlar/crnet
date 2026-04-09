@@ -34,6 +34,11 @@ public non-sealed interface AuthStrategy extends AuthConfig {
      */
     void invalidate(@Nullable UUID playerUuid);
 
+    /**
+     * Invalidates all cached tokens, forcing re-authentication on subsequent calls.
+     */
+    void invalidateAll();
+
     // ── Static factories ────────────────────────────────────────────────
 
     /**

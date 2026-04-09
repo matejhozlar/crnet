@@ -21,4 +21,9 @@ class NoneAuthStrategy implements AuthStrategy {
     public void invalidate(@Nullable UUID playerUuid) {
         // No-op
     }
+
+    @Override
+    public void invalidateAll() {
+        // No-op
+    }
 }

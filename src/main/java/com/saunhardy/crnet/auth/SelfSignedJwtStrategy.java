@@ -48,4 +48,9 @@ class SelfSignedJwtStrategy implements AuthStrategy {
     public void invalidate(@Nullable UUID playerUuid) {
         // No-op — tokens are generated fresh each time.
     }
+
+    @Override
+    public void invalidateAll() {
+        // No-op — tokens are generated fresh each time.
+    }
 }
