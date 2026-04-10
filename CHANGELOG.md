@@ -1,11 +1,5 @@
-## Version 2.2.0
+## Version 2.3.0
 
 ### Added
-- Backend responses can now include a player-facing message that is displayed in in-game chat, separate from the internal log message used for diagnostics.
-
-### Changed
-- Internal improvements to HTTP response handling and logging.
-
-### Breaking
-- The `postAsync` method now returns `CompletableFuture<ApiResponse<Void>>` instead of `CompletableFuture<Void>` — any code calling this method must be updated to unwrap the response object.
-- `PlayerPresenceData` has been removed; use `PresenceAPI` directly instead.
+- Added a configurable thread pool size (`threadPoolSize`, default 3, range 1-10) in `crnet-common.toml`. The request queue now processes requests concurrently across multiple threads, preventing a single slow backend call from blocking others.
+- Added opt-in request logging (`logRequests` setting in `crnet-common.toml`). When enabled, logs every outgoing request URL and response status code at INFO level. Disabled by default.
