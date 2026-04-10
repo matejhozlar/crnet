@@ -63,7 +63,7 @@ public class RequestQueue {
             executor.submit(() -> {
                 try {
                     future.complete(task.call());
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     future.completeExceptionally(e);
                 }
             });
