@@ -37,7 +37,7 @@ class SelfSignedJwtStrategy implements AuthStrategy {
             return Jwts.builder()
                     .issuedAt(new Date(nowMs))
                     .expiration(new Date(nowMs + ttlSeconds * 1_000L))
-                    .signWith(key)
+                    .signWith(key, Jwts.SIG.HS256)
                     .compact();
         } catch (Exception e) {
             throw new TokenException("Failed to generate self-signed JWT", e);
