@@ -60,6 +60,25 @@ dependencies {
     implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-gson:0.12.5'
+
+    jarJar('io.jsonwebtoken:jjwt-api') {
+        version {
+            strictly '[0.12.5, 1.0.0)'
+            prefer '0.12.5'
+        }
+    }
+    jarJar('io.jsonwebtoken:jjwt-impl') {
+        version {
+            strictly '[0.12.5, 1.0.0)'
+            prefer '0.12.5'
+        }
+    }
+    jarJar('io.jsonwebtoken:jjwt-gson') {
+        version {
+            strictly '[0.12.5, 1.0.0)'
+            prefer '0.12.5'
+        }
+    }
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
