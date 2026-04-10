@@ -1,6 +1,7 @@
 package com.saunhardy.crnet.http;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.saunhardy.crnet.auth.TokenException;
 import com.saunhardy.crnet.auth.TokenManager;
@@ -74,21 +75,18 @@ public class BackendHttpClient {
     }
 
     /**
-     * Fire-and-forget POST (server-level auth). Does not parse the response body.
+     * POST that returns the response envelope without deserialising a typed body (server-level auth).
      */
-    public void postFireAndForget(String path, String jsonBody) throws BackendException {
-        postFireAndForget(path, jsonBody, null);
+    public ApiResponse<Void> postFireAndForget(String path, String jsonBody) throws BackendException {
+        return postFireAndForget(path, jsonBody, null);
     }
 
     /**
-     * Fire-and-forget POST. Does not parse the response body.
+     * POST that returns the response envelope without deserialising a typed body.
      */
-    public void postFireAndForget(String path, String jsonBody, @Nullable UUID playerUuid) throws BackendException {
+    public ApiResponse<Void> postFireAndForget(String path, String jsonBody, @Nullable UUID playerUuid) throws BackendException {
         HttpResponse<String> response = sendWithRetry("POST", path, jsonBody, playerUuid);
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new BackendException("POST " + path + " returned HTTP " + response.statusCode() + ": " + response.body(),
-                    response.statusCode());
-        }
+        return parseResponse(response, Void.class);
     }
 
     // ── GET ──────────────────────────────────────────────────────────────
@@ -202,21 +200,34 @@ public class BackendHttpClient {
     private <T> ApiResponse<T> parseResponse(HttpResponse<String> response, Class<T> responseType) throws BackendException {
         int status = response.statusCode();
         String rawBody = response.body();
+        String message = extractMessage(rawBody);
 
         if (status < 200 || status >= 300) {
-            return new ApiResponse<>(status, rawBody, null, rawBody);
+            return new ApiResponse<>(status, rawBody, null, rawBody, message);
         }
 
         if (responseType == Void.class || responseType == void.class) {
-            return new ApiResponse<>(status, rawBody, null, null);
+            return new ApiResponse<>(status, rawBody, null, null, message);
         }
 
         try {
             T data = GSON.fromJson(rawBody, responseType);
-            return new ApiResponse<>(status, rawBody, data, null);
+            return new ApiResponse<>(status, rawBody, data, null, message);
         } catch (JsonSyntaxException e) {
             throw new BackendException("Failed to parse response body: " + e.getMessage(), e);
         }
+    }
+
+    private @Nullable String extractMessage(String rawBody) {
+        try {
+            JsonObject json = GSON.fromJson(rawBody, JsonObject.class);
+            if (json != null && json.has("message") && json.get("message").isJsonPrimitive()) {
+                return json.get("message").getAsString();
+            }
+        } catch (JsonSyntaxException | IllegalStateException e) {
+            // Not JSON or no string "message" field
+        }
+        return null;
     }
 
     private void sleepBackoff(int attempt) {
