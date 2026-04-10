@@ -1,4 +1,4 @@
-## Version 2.1.1
+## Version 2.1.2
 
 ### Fixed
-- Fixed a crash that occurred during mod loading when the mod configuration used the SERVER config type, which is only available after a world starts. Configuration now loads correctly at startup.
+- Fixed async HTTP requests silently swallowing errors (401, 403, 400, etc.). Failed requests are now logged as errors, and non-2xx responses are logged as warnings, making connection and authentication issues visible in the server log.
