@@ -33,7 +33,7 @@ public class CRNet {
     private static RequestQueue requestQueue;
 
     public CRNet(IEventBus modEventBus, ModContainer modContainer) {
-        modContainer.registerConfig(ModConfig.Type.SERVER, CRNetConfig.SPEC);
+        modContainer.registerConfig(ModConfig.Type.COMMON, CRNetConfig.SPEC);
         modEventBus.addListener(this::commonSetup);
         NeoForge.EVENT_BUS.register(this);
     }

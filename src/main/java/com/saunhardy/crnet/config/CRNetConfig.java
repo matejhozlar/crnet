@@ -9,8 +9,8 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  * retry policy). Per-client settings (base URL, auth strategy, heartbeat) are
  * provided via {@link com.saunhardy.crnet.CRNetClient.Builder}.
  * <p>
- * Registered as a {@code SERVER} config so values are read from
- * {@code crnet-server.toml} and are per-world on dedicated servers.
+ * Registered as a {@code COMMON} config so values are read from
+ * {@code crnet-common.toml} and are shared across all worlds.
  */
 public class CRNetConfig {
 
