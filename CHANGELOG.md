@@ -1,4 +1,5 @@
-## Version 2.1.2
+## Version 2.1.3
 
 ### Fixed
-- Fixed async HTTP requests silently swallowing errors (401, 403, 400, etc.). Failed requests are now logged as errors, and non-2xx responses are logged as warnings, making connection and authentication issues visible in the server log.
+- Fixed server requests silently failing due to the JJWT library not being bundled correctly inside the mod jar — requests that relied on authentication tokens now work as expected.
+- Fixed an issue where certain low-level request errors were silently swallowed and never reported, making failures invisible in logs.
