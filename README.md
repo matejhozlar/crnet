@@ -35,7 +35,7 @@ In the `dependencies` block of your `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation "com.saunhardy:crnet:2.1.0"
+    implementation "com.saunhardy:crnet:2.1.1"
 }
 ```
 
@@ -183,7 +183,7 @@ For detailed documentation, visit the [CRNet Wiki](https://gitea.matejhoz.com/Cr
 - [Authentication](https://gitea.matejhoz.com/Createrington/crnet/wiki/Authentication) — Auth strategies and token management
 - [Making Requests](https://gitea.matejhoz.com/Createrington/crnet/wiki/Making-Requests) — POST, GET, and async patterns
 - [Heartbeats](https://gitea.matejhoz.com/Createrington/crnet/wiki/Heartbeats) — Periodic request scheduling
-- [Configuration](https://gitea.matejhoz.com/Createrington/crnet/wiki/Configuration) — Server config and tuning
+- [Configuration](https://gitea.matejhoz.com/Createrington/crnet/wiki/Configuration) — Common config and tuning
 - [Error Handling](https://gitea.matejhoz.com/Createrington/crnet/wiki/Error-Handling) — Exceptions, retries, and failure modes
 - [Architecture](https://gitea.matejhoz.com/Createrington/crnet/wiki/Architecture) — Internals and design decisions
 - [API Reference](https://gitea.matejhoz.com/Createrington/crnet/wiki/API-Reference) — Full class and method reference
