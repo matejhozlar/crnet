@@ -1,5 +1,11 @@
-## Version 2.1.3
+## Version 2.2.0
 
-### Fixed
-- Fixed server requests silently failing due to the JJWT library not being bundled correctly inside the mod jar — requests that relied on authentication tokens now work as expected.
-- Fixed an issue where certain low-level request errors were silently swallowed and never reported, making failures invisible in logs.
+### Added
+- Backend responses can now include a player-facing message that is displayed in in-game chat, separate from the internal log message used for diagnostics.
+
+### Changed
+- Internal improvements to HTTP response handling and logging.
+
+### Breaking
+- The `postAsync` method now returns `CompletableFuture<ApiResponse<Void>>` instead of `CompletableFuture<Void>` — any code calling this method must be updated to unwrap the response object.
+- `PlayerPresenceData` has been removed; use `PresenceAPI` directly instead.
