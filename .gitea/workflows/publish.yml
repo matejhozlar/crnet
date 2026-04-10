@@ -2,6 +2,15 @@ name: Publish
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_maven:
+        description: 'Push to Maven repo'
+        type: boolean
+        default: true
+      publish_curseforge:
+        description: 'Publish to CurseForge'
+        type: boolean
+        default: true
 
 jobs:
   publish:
@@ -24,15 +33,17 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "value=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)" >> $GITHUB_OUTPUT
+        run: echo "value=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)" >> "$GITHUB_OUTPUT"
 
       - name: Build with Gradle
         run: ./gradlew build
 
       - name: Publish artifacts
+        if: ${{ inputs.publish_maven }}
         run: ./gradlew publish
 
       - name: Push to Maven repo
+        if: ${{ inputs.publish_maven }}
         run: |
           git clone https://Claude:${{ secrets.MAVEN_REPO_TOKEN }}@gitea.matejhoz.com/matejhozlar/maven.git maven-repo
           cp -r build/maven-publish/. maven-repo/
@@ -44,6 +55,7 @@ jobs:
           git push
 
       - name: Publish to CurseForge
+        if: ${{ inputs.publish_curseforge }}
         uses: Kir-Antipov/mc-publish@v3.3
         with:
           version: ${{ steps.version.outputs.value }}
