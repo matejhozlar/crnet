@@ -16,6 +16,7 @@ public class CRNetConfig {
 
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
+    public static final ModConfigSpec.IntValue THREAD_POOL_SIZE;
     public static final ModConfigSpec.IntValue QUEUE_CAPACITY;
     public static final ModConfigSpec.IntValue CONNECT_TIMEOUT_MS;
     public static final ModConfigSpec.IntValue REQUEST_TIMEOUT_MS;
@@ -25,6 +26,10 @@ public class CRNetConfig {
 
     static {
         BUILDER.comment("CRNet — shared backend HTTP client configuration").push("network");
+
+        THREAD_POOL_SIZE = BUILDER
+                .comment("Number of threads for processing requests (shared across all mods using CRNet)")
+                .defineInRange("threadPoolSize", 3, 1, 10);
 
         QUEUE_CAPACITY = BUILDER
                 .comment("Bounded request queue capacity (log-and-drop on overflow)")

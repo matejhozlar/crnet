@@ -44,7 +44,7 @@ public class CRNet {
                 .connectTimeout(Duration.ofMillis(CRNetConfig.CONNECT_TIMEOUT_MS.get()))
                 .build();
 
-        requestQueue = new RequestQueue(CRNetConfig.QUEUE_CAPACITY.get());
+        requestQueue = new RequestQueue(CRNetConfig.THREAD_POOL_SIZE.get(), CRNetConfig.QUEUE_CAPACITY.get());
         LOGGER.info("CRNet initialised");
     }
 
