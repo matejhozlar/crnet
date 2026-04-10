@@ -200,34 +200,48 @@ public class BackendHttpClient {
     private <T> ApiResponse<T> parseResponse(HttpResponse<String> response, Class<T> responseType) throws BackendException {
         int status = response.statusCode();
         String rawBody = response.body();
-        String message = extractMessage(rawBody);
+        String[] envelope = extractEnvelope(rawBody);
+        String message = envelope[0];
+        String playerMessage = envelope[1];
 
         if (status < 200 || status >= 300) {
-            return new ApiResponse<>(status, rawBody, null, rawBody, message);
+            return new ApiResponse<>(status, rawBody, null, rawBody, message, playerMessage);
         }
 
         if (responseType == Void.class || responseType == void.class) {
-            return new ApiResponse<>(status, rawBody, null, null, message);
+            return new ApiResponse<>(status, rawBody, null, null, message, playerMessage);
         }
 
         try {
             T data = GSON.fromJson(rawBody, responseType);
-            return new ApiResponse<>(status, rawBody, data, null, message);
+            return new ApiResponse<>(status, rawBody, data, null, message, playerMessage);
         } catch (JsonSyntaxException e) {
             throw new BackendException("Failed to parse response body: " + e.getMessage(), e);
         }
     }
 
-    private @Nullable String extractMessage(String rawBody) {
+    /**
+     * Extracts {@code message} and {@code playerMessage} from a JSON response body.
+     *
+     * @return a two-element array: {@code [message, playerMessage]} (either may be null)
+     */
+    private String[] extractEnvelope(String rawBody) {
+        String message = null;
+        String playerMessage = null;
         try {
             JsonObject json = GSON.fromJson(rawBody, JsonObject.class);
-            if (json != null && json.has("message") && json.get("message").isJsonPrimitive()) {
-                return json.get("message").getAsString();
+            if (json != null) {
+                if (json.has("message") && json.get("message").isJsonPrimitive()) {
+                    message = json.get("message").getAsString();
+                }
+                if (json.has("playerMessage") && json.get("playerMessage").isJsonPrimitive()) {
+                    playerMessage = json.get("playerMessage").getAsString();
+                }
             }
         } catch (JsonSyntaxException | IllegalStateException e) {
-            // Not JSON or no string "message" field
+            // Not JSON — return nulls
         }
-        return null;
+        return new String[]{message, playerMessage};
     }
 
     private void sleepBackoff(int attempt) {
