@@ -35,7 +35,7 @@ In the `dependencies` block of your `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation "com.saunhardy:crnet:2.1.1"
+    implementation "com.saunhardy:crnet:2.3.0"
 }
 ```
 
@@ -150,8 +150,6 @@ com.saunhardy.crnet
 │   └── ApiResponse.java        Generic typed response wrapper
 ├── queue/
 │   └── RequestQueue.java       Shared bounded executor
-├── presence/
-│   └── PlayerPresenceData.java Player presence data model
 └── util/
     └── UrlUtils.java           URL utilities
 ```
