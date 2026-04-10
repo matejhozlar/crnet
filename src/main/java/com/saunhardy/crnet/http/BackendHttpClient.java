@@ -129,6 +129,10 @@ public class BackendHttpClient {
                 throw new BackendException("Failed to obtain auth token: " + e.getMessage(), e);
             }
 
+            if (CRNetConfig.LOG_REQUESTS.get()) {
+                LOGGER.info(">> {} {}", method, UrlUtils.safeJoin(baseUrl, path));
+            }
+
             HttpResponse<String> response;
             try {
                 response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -146,6 +150,10 @@ public class BackendHttpClient {
             }
 
             int status = response.statusCode();
+
+            if (CRNetConfig.LOG_REQUESTS.get()) {
+                LOGGER.info("<< {} {} — HTTP {}", method, path, status);
+            }
 
             // 401: invalidate token and retry once (does not consume the normal retry budget)
             if (status == 401 && !authRetried) {

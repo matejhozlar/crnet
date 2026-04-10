@@ -16,15 +16,21 @@ public class CRNetConfig {
 
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
+    public static final ModConfigSpec.IntValue THREAD_POOL_SIZE;
     public static final ModConfigSpec.IntValue QUEUE_CAPACITY;
     public static final ModConfigSpec.IntValue CONNECT_TIMEOUT_MS;
     public static final ModConfigSpec.IntValue REQUEST_TIMEOUT_MS;
     public static final ModConfigSpec.IntValue MAX_RETRIES;
+    public static final ModConfigSpec.BooleanValue LOG_REQUESTS;
 
     public static final ModConfigSpec SPEC;
 
     static {
         BUILDER.comment("CRNet — shared backend HTTP client configuration").push("network");
+
+        THREAD_POOL_SIZE = BUILDER
+                .comment("Number of threads for processing requests (shared across all mods using CRNet)")
+                .defineInRange("threadPoolSize", 3, 1, 10);
 
         QUEUE_CAPACITY = BUILDER
                 .comment("Bounded request queue capacity (log-and-drop on overflow)")
@@ -41,6 +47,10 @@ public class CRNetConfig {
         MAX_RETRIES = BUILDER
                 .comment("Maximum retry attempts for transient failures (5xx / I/O errors)")
                 .defineInRange("maxRetries", 3, 0, 10);
+
+        LOG_REQUESTS = BUILDER
+                .comment("Log every outgoing request and response status (useful for debugging)")
+                .define("logRequests", false);
 
         BUILDER.pop();
 

@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -31,14 +32,16 @@ public class RequestQueue {
 
     private final ExecutorService executor;
 
-    public RequestQueue(int capacity) {
+    private static final AtomicInteger THREAD_COUNTER = new AtomicInteger(0);
+
+    public RequestQueue(int threadPoolSize, int capacity) {
         BlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(capacity);
         this.executor = new ThreadPoolExecutor(
-                1, 1,
+                threadPoolSize, threadPoolSize,
                 0L, TimeUnit.MILLISECONDS,
                 queue,
                 r -> {
-                    Thread t = new Thread(r, "crnet-request-queue");
+                    Thread t = new Thread(r, "crnet-request-queue-" + THREAD_COUNTER.getAndIncrement());
                     t.setDaemon(true);
                     return t;
                 },
