@@ -165,6 +165,10 @@ public class BackendHttpClient {
                 continue;
             }
 
+            if (status < 200 || status >= 300) {
+                LOGGER.warn("{} {} returned HTTP {}: {}", method, path, status, response.body());
+            }
+
             return response;
         }
 
