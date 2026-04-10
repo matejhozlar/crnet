@@ -8,6 +8,8 @@ import com.saunhardy.crnet.http.ApiResponse;
 import com.saunhardy.crnet.http.BackendHttpClient;
 import com.saunhardy.crnet.queue.RequestQueue;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.http.HttpClient;
 import java.util.UUID;
@@ -39,6 +41,8 @@ import java.util.concurrent.CompletableFuture;
  * }</pre>
  */
 public class CRNetClient {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CRNetClient.class);
 
     private final BackendHttpClient httpClient;
     private final TokenManager tokenManager;
@@ -72,9 +76,13 @@ public class CRNetClient {
      * @return a future that completes when the request finishes (or exceptionally on error)
      */
     public CompletableFuture<Void> postAsync(String path, String jsonBody, @Nullable UUID playerUuid) {
-        return requestQueue.submit(() -> {
+        return requestQueue.<Void>submit(() -> {
             httpClient.postFireAndForget(path, jsonBody, playerUuid);
             return null;
+        }).whenComplete((result, ex) -> {
+            if (ex != null) {
+                LOGGER.error("Async POST {} failed: {}", path, ex.getMessage());
+            }
         });
     }
 
