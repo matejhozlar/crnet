@@ -57,29 +57,28 @@ public class CRNetClient {
     // ── Async fire-and-forget ───────────────────────────────────────────
 
     /**
-     * Submits a fire-and-forget POST (server-level auth).
+     * Submits a POST and returns the response envelope (server-level auth).
      *
      * @param path     endpoint path relative to the base URL
      * @param jsonBody serialised JSON body
-     * @return a future that completes when the request finishes (or exceptionally on error)
+     * @return a future completing with the response envelope
      */
-    public CompletableFuture<Void> postAsync(String path, String jsonBody) {
+    public CompletableFuture<ApiResponse<Void>> postAsync(String path, String jsonBody) {
         return postAsync(path, jsonBody, null);
     }
 
     /**
-     * Submits a fire-and-forget POST with optional per-player auth.
+     * Submits a POST and returns the response envelope with optional per-player auth.
      *
      * @param path       endpoint path relative to the base URL
      * @param jsonBody   serialised JSON body
      * @param playerUuid player UUID for per-player auth, or {@code null}
-     * @return a future that completes when the request finishes (or exceptionally on error)
+     * @return a future completing with the response envelope
      */
-    public CompletableFuture<Void> postAsync(String path, String jsonBody, @Nullable UUID playerUuid) {
-        return requestQueue.<Void>submit(() -> {
-            httpClient.postFireAndForget(path, jsonBody, playerUuid);
-            return null;
-        }).whenComplete((result, ex) -> {
+    public CompletableFuture<ApiResponse<Void>> postAsync(String path, String jsonBody, @Nullable UUID playerUuid) {
+        return requestQueue.submit(() ->
+                httpClient.postFireAndForget(path, jsonBody, playerUuid)
+        ).whenComplete((result, ex) -> {
             if (ex != null) {
                 LOGGER.error("Async POST {} failed: {}", path, ex.getMessage());
             }

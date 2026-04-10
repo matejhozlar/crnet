@@ -99,9 +99,17 @@ public class HeartbeatBuilder {
         scheduler.scheduleAtFixedRate(() -> {
             try {
                 String payload = payloadSupplier.get();
-                client.postAsync(endpoint, payload);
+                client.postAsync(endpoint, payload).whenComplete((response, ex) -> {
+                    if (ex != null) {
+                        LOGGER.error("Heartbeat to {} failed: {}", endpoint, ex.getMessage());
+                    } else if (!response.isSuccess()) {
+                        LOGGER.warn("Heartbeat to {} returned HTTP {}: {}", endpoint,
+                                response.getStatusCode(),
+                                response.getMessage() != null ? response.getMessage() : response.getError());
+                    }
+                });
             } catch (Exception e) {
-                LOGGER.error("Failed to send heartbeat to {}: {}", endpoint, e.getMessage());
+                LOGGER.error("Failed to build heartbeat payload for {}: {}", endpoint, e.getMessage());
             }
         }, intervalMs, intervalMs, TimeUnit.MILLISECONDS);
 
