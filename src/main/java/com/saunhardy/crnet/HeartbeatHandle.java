@@ -33,6 +33,12 @@ public class HeartbeatHandle {
      * in flight, the trigger is a no-op. Intended for operator-invoked pushes
      * (e.g. an RCON command) that need an immediate send without waiting for
      * the next scheduled tick.
+     * <p>
+     * Does <em>not</em> reset the fixed-rate schedule — the next scheduled tick
+     * still fires at its originally-computed time. If persistence is enabled
+     * ({@link HeartbeatBuilder#persistLastSentTo}), a successful manual send
+     * updates the persisted timestamp, so a restart after {@code triggerNow()}
+     * will reschedule relative to the manual send.
      *
      * @return {@code true} if the tick was submitted, {@code false} if the
      *         scheduler is shut down and the request was dropped

@@ -262,7 +262,11 @@ public class HeartbeatBuilder {
             client.postAsync(endpoint, payload).whenComplete((response, ex) -> {
                 if (ex != null) {
                     LOGGER.error("Heartbeat to {} failed: {}", endpoint, ex.getMessage());
-                } else if (response != null && !response.isSuccess()) {
+                } else if (response == null) {
+                    // postAsync should not complete with both response and exception null, but
+                    // guard against a future contract change masquerading as a success.
+                    LOGGER.warn("Heartbeat to {} completed with no response and no exception — not persisting timestamp", endpoint);
+                } else if (!response.isSuccess()) {
                     LOGGER.warn("Heartbeat to {} returned HTTP {}: {}", endpoint,
                             response.getStatusCode(),
                             response.getMessage() != null ? response.getMessage() : response.getError());
@@ -292,16 +296,21 @@ public class HeartbeatBuilder {
             if (persistencePath == null) {
                 return;
             }
+            Path tmp = persistencePath.resolveSibling(persistencePath.getFileName() + ".tmp");
             try {
                 Path parent = persistencePath.getParent();
                 if (parent != null) {
                     Files.createDirectories(parent);
                 }
-                Path tmp = persistencePath.resolveSibling(persistencePath.getFileName() + ".tmp");
                 Files.writeString(tmp, Long.toString(timestampMs));
                 Files.move(tmp, persistencePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             } catch (IOException e) {
                 LOGGER.warn("Could not persist heartbeat timestamp to {}: {}", persistencePath, e.getMessage());
+                try {
+                    Files.deleteIfExists(tmp);
+                } catch (IOException cleanupEx) {
+                    LOGGER.debug("Could not clean up heartbeat tmp file {}: {}", tmp, cleanupEx.getMessage());
+                }
             }
         }
     }
