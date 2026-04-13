@@ -84,8 +84,8 @@ dependencies {
     }
     jarJar('com.saunhardy:createrington-dev-api') {
         version {
-            strictly '[1.0.0, 2.0.0)'
-            prefer '1.0.0'
+            strictly '[1.1.0, 2.0.0)'
+            prefer '1.1.0'
         }
     }
 }
