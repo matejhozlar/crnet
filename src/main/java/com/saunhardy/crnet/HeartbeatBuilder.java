@@ -3,10 +3,12 @@ package com.saunhardy.crnet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -47,6 +49,7 @@ public class HeartbeatBuilder {
     private static final AtomicInteger THREAD_COUNTER = new AtomicInteger(0);
 
     private final CRNetClient client;
+    private final AtomicBoolean buildInFlight = new AtomicBoolean(false);
     private String endpoint;
     private long intervalMs;
     private Supplier<String> payloadSupplier;
@@ -108,8 +111,8 @@ public class HeartbeatBuilder {
      * @param supplier        a function returning the JSON payload string
      */
     public HeartbeatBuilder payloadOn(Executor payloadExecutor, Supplier<String> supplier) {
-        this.payloadExecutor = payloadExecutor;
-        this.payloadSupplier = supplier;
+        this.payloadExecutor = Objects.requireNonNull(payloadExecutor, "payloadExecutor");
+        this.payloadSupplier = Objects.requireNonNull(supplier, "supplier");
         return this;
     }
 
@@ -143,14 +146,32 @@ public class HeartbeatBuilder {
     }
 
     private void tick() {
-        if (payloadExecutor != null) {
-            try {
-                payloadExecutor.execute(this::buildAndSend);
-            } catch (Exception e) {
-                LOGGER.error("Failed to dispatch heartbeat payload build for {}: {}", endpoint, e.getMessage());
-            }
-        } else {
+        if (payloadExecutor == null) {
+            // Scheduler is single-threaded, so inline execution is naturally self-limiting.
             buildAndSend();
+            return;
+        }
+
+        // When dispatching to a foreign executor, the scheduler returns immediately
+        // and the next tick can fire before the previous payload finished building.
+        // Skip overlapping ticks to avoid concurrent POSTs and redundant load on
+        // the payload executor (typically the MC server thread).
+        if (!buildInFlight.compareAndSet(false, true)) {
+            LOGGER.debug("Skipping heartbeat tick for {} — previous build still in flight", endpoint);
+            return;
+        }
+
+        try {
+            payloadExecutor.execute(() -> {
+                try {
+                    buildAndSend();
+                } finally {
+                    buildInFlight.set(false);
+                }
+            });
+        } catch (Exception e) {
+            buildInFlight.set(false);
+            LOGGER.error("Failed to dispatch heartbeat payload build for {}: {}", endpoint, e.getMessage());
         }
     }
 
