@@ -11,7 +11,9 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.net.http.HttpClient;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -109,6 +111,22 @@ public class CRNetClient {
     }
 
     /**
+     * Server-level auth shorthand for {@link #post(String, String, Type, UUID)}.
+     */
+    public <T> CompletableFuture<ApiResponse<T>> post(String path, String jsonBody, Type responseType) {
+        return post(path, jsonBody, responseType, null);
+    }
+
+    /**
+     * Sends a POST and returns the typed response, accepting a generic
+     * {@link Type} for parameterised shapes (e.g. {@code List<TopEntry>}).
+     */
+    public <T> CompletableFuture<ApiResponse<T>> post(String path, String jsonBody, Type responseType,
+                                                      @Nullable UUID playerUuid) {
+        return requestQueue.submit(() -> httpClient.post(path, jsonBody, responseType, playerUuid));
+    }
+
+    /**
      * Sends a GET and returns the typed response (server-level auth).
      */
     public <T> CompletableFuture<ApiResponse<T>> get(String path, Class<T> responseType) {
@@ -126,6 +144,37 @@ public class CRNetClient {
     public <T> CompletableFuture<ApiResponse<T>> get(String path, Class<T> responseType,
                                                      @Nullable UUID playerUuid) {
         return requestQueue.submit(() -> httpClient.get(path, responseType, playerUuid));
+    }
+
+    /**
+     * Server-level auth shorthand for {@link #get(String, Type, UUID)}.
+     */
+    public <T> CompletableFuture<ApiResponse<T>> get(String path, Type responseType) {
+        return get(path, responseType, null);
+    }
+
+    /**
+     * Sends a GET and returns the typed response, accepting a generic
+     * {@link Type} for parameterised shapes (e.g. {@code List<TopEntry>}).
+     */
+    public <T> CompletableFuture<ApiResponse<T>> get(String path, Type responseType,
+                                                     @Nullable UUID playerUuid) {
+        return requestQueue.submit(() -> httpClient.get(path, responseType, playerUuid));
+    }
+
+    /**
+     * Convenience for endpoints whose typed payload is a JSON array
+     * (e.g. {@code GET /api/currency/top}). Returns an envelope with
+     * {@code List<T>} as the {@code data} payload.
+     */
+    public <T> CompletableFuture<ApiResponse<List<T>>> getList(String path, Class<T> elementType,
+                                                               @Nullable UUID playerUuid) {
+        return requestQueue.submit(() -> httpClient.getList(path, elementType, playerUuid));
+    }
+
+    /** Server-level auth shorthand for {@link #getList(String, Class, UUID)}. */
+    public <T> CompletableFuture<ApiResponse<List<T>>> getList(String path, Class<T> elementType) {
+        return getList(path, elementType, null);
     }
 
     // ── Token management ────────────────────────────────────────────────
