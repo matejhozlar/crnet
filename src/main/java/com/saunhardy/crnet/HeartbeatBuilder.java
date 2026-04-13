@@ -3,6 +3,10 @@ package com.saunhardy.crnet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -42,6 +46,14 @@ import java.util.function.Supplier;
  *         .payloadOn(server, () -> buildPayloadJson(server))
  *         .start();
  * }</pre>
+ *
+ * <h3>Restart-persistent scheduling</h3>
+ * By default the first tick fires one interval after {@link #start()}. When a
+ * persistence file is configured via {@link #persistLastSentTo(Path)}, the
+ * builder reads the timestamp of the last successful send from that file and
+ * schedules the next tick for {@code last + interval}. This lets a long-period
+ * heartbeat (e.g. daily) survive server restarts without re-firing on every
+ * boot.
  */
 public class HeartbeatBuilder {
 
@@ -49,11 +61,11 @@ public class HeartbeatBuilder {
     private static final AtomicInteger THREAD_COUNTER = new AtomicInteger(0);
 
     private final CRNetClient client;
-    private final AtomicBoolean buildInFlight = new AtomicBoolean(false);
     private String endpoint;
     private long intervalMs;
     private Supplier<String> payloadSupplier;
     private Executor payloadExecutor;
+    private Path persistencePath;
 
     HeartbeatBuilder(CRNetClient client) {
         this.client = client;
@@ -117,9 +129,27 @@ public class HeartbeatBuilder {
     }
 
     /**
+     * Enables restart-persistent scheduling. The timestamp of each successful
+     * send is written to {@code path}; at {@link #start()} the file is read
+     * and the next tick is scheduled for {@code last + interval} (or
+     * immediately, if that moment has already passed).
+     * <p>
+     * The file stores a single ASCII line containing epoch millis. Missing,
+     * empty, or unparseable files are treated as "never sent" and the
+     * heartbeat fires at {@code now + interval} as if persistence were off.
+     * Parent directories are created on demand.
+     *
+     * @param path file that stores the last-sent timestamp
+     */
+    public HeartbeatBuilder persistLastSentTo(Path path) {
+        this.persistencePath = Objects.requireNonNull(path, "path");
+        return this;
+    }
+
+    /**
      * Starts the heartbeat on a new daemon thread.
      *
-     * @return a handle that can be used to stop the heartbeat
+     * @return a handle that can be used to stop or manually trigger the heartbeat
      * @throws IllegalStateException if required fields are not set
      */
     public HeartbeatHandle start() {
@@ -139,58 +169,140 @@ public class HeartbeatBuilder {
             return t;
         });
 
-        scheduler.scheduleAtFixedRate(this::tick, intervalMs, intervalMs, TimeUnit.MILLISECONDS);
+        HeartbeatTask task = new HeartbeatTask(
+                client, endpoint, intervalMs, payloadSupplier, payloadExecutor, persistencePath);
 
-        LOGGER.info("Heartbeat started: endpoint={}, interval={}ms", endpoint, intervalMs);
-        return new HeartbeatHandle(scheduler);
+        long initialDelayMs = task.computeInitialDelayMs();
+        scheduler.scheduleAtFixedRate(task, initialDelayMs, intervalMs, TimeUnit.MILLISECONDS);
+
+        LOGGER.info("Heartbeat started: endpoint={}, interval={}ms, initialDelay={}ms",
+                endpoint, intervalMs, initialDelayMs);
+        return new HeartbeatHandle(scheduler, task);
     }
 
-    private void tick() {
-        if (payloadExecutor == null) {
-            // Scheduler is single-threaded, so inline execution is naturally self-limiting.
-            buildAndSend();
-            return;
+    /**
+     * Captures the tick/send logic and its configuration. Held by
+     * {@link HeartbeatHandle} so {@code triggerNow()} can re-enter it.
+     */
+    static final class HeartbeatTask implements Runnable {
+
+        private final CRNetClient client;
+        private final String endpoint;
+        private final long intervalMs;
+        private final Supplier<String> payloadSupplier;
+        private final Executor payloadExecutor;
+        private final Path persistencePath;
+        private final AtomicBoolean buildInFlight = new AtomicBoolean(false);
+
+        HeartbeatTask(CRNetClient client, String endpoint, long intervalMs,
+                      Supplier<String> payloadSupplier, Executor payloadExecutor,
+                      Path persistencePath) {
+            this.client = client;
+            this.endpoint = endpoint;
+            this.intervalMs = intervalMs;
+            this.payloadSupplier = payloadSupplier;
+            this.payloadExecutor = payloadExecutor;
+            this.persistencePath = persistencePath;
         }
 
-        // When dispatching to a foreign executor, the scheduler returns immediately
-        // and the next tick can fire before the previous payload finished building.
-        // Skip overlapping ticks to avoid concurrent POSTs and redundant load on
-        // the payload executor (typically the MC server thread).
-        if (!buildInFlight.compareAndSet(false, true)) {
-            LOGGER.debug("Skipping heartbeat tick for {} — previous build still in flight", endpoint);
-            return;
+        long computeInitialDelayMs() {
+            if (persistencePath == null) {
+                return intervalMs;
+            }
+            long lastSent = readLastSent();
+            if (lastSent <= 0L) {
+                return intervalMs;
+            }
+            long elapsed = System.currentTimeMillis() - lastSent;
+            if (elapsed >= intervalMs) {
+                return 0L;
+            }
+            return intervalMs - elapsed;
         }
 
-        try {
-            payloadExecutor.execute(() -> {
-                try {
-                    buildAndSend();
-                } finally {
-                    buildInFlight.set(false);
+        @Override
+        public void run() {
+            if (payloadExecutor == null) {
+                // Scheduler is single-threaded, so inline execution is naturally self-limiting.
+                buildAndSend();
+                return;
+            }
+
+            // When dispatching to a foreign executor, the scheduler returns immediately
+            // and the next tick can fire before the previous payload finished building.
+            // Skip overlapping ticks to avoid concurrent POSTs and redundant load on
+            // the payload executor (typically the MC server thread).
+            if (!buildInFlight.compareAndSet(false, true)) {
+                LOGGER.debug("Skipping heartbeat tick for {} — previous build still in flight", endpoint);
+                return;
+            }
+
+            try {
+                payloadExecutor.execute(() -> {
+                    try {
+                        buildAndSend();
+                    } finally {
+                        buildInFlight.set(false);
+                    }
+                });
+            } catch (Exception e) {
+                buildInFlight.set(false);
+                LOGGER.error("Failed to dispatch heartbeat payload build for {}: {}", endpoint, e.getMessage());
+            }
+        }
+
+        private void buildAndSend() {
+            final String payload;
+            try {
+                payload = payloadSupplier.get();
+            } catch (Exception e) {
+                LOGGER.error("Failed to build heartbeat payload for {}: {}", endpoint, e.getMessage());
+                return;
+            }
+            client.postAsync(endpoint, payload).whenComplete((response, ex) -> {
+                if (ex != null) {
+                    LOGGER.error("Heartbeat to {} failed: {}", endpoint, ex.getMessage());
+                } else if (response != null && !response.isSuccess()) {
+                    LOGGER.warn("Heartbeat to {} returned HTTP {}: {}", endpoint,
+                            response.getStatusCode(),
+                            response.getMessage() != null ? response.getMessage() : response.getError());
+                } else {
+                    writeLastSent(System.currentTimeMillis());
                 }
             });
-        } catch (Exception e) {
-            buildInFlight.set(false);
-            LOGGER.error("Failed to dispatch heartbeat payload build for {}: {}", endpoint, e.getMessage());
         }
-    }
 
-    private void buildAndSend() {
-        final String payload;
-        try {
-            payload = payloadSupplier.get();
-        } catch (Exception e) {
-            LOGGER.error("Failed to build heartbeat payload for {}: {}", endpoint, e.getMessage());
-            return;
-        }
-        client.postAsync(endpoint, payload).whenComplete((response, ex) -> {
-            if (ex != null) {
-                LOGGER.error("Heartbeat to {} failed: {}", endpoint, ex.getMessage());
-            } else if (!response.isSuccess()) {
-                LOGGER.warn("Heartbeat to {} returned HTTP {}: {}", endpoint,
-                        response.getStatusCode(),
-                        response.getMessage() != null ? response.getMessage() : response.getError());
+        private long readLastSent() {
+            try {
+                if (!Files.exists(persistencePath)) {
+                    return 0L;
+                }
+                String content = Files.readString(persistencePath).trim();
+                if (content.isEmpty()) {
+                    return 0L;
+                }
+                return Long.parseLong(content);
+            } catch (IOException | NumberFormatException e) {
+                LOGGER.warn("Could not read heartbeat timestamp from {}: {}", persistencePath, e.getMessage());
+                return 0L;
             }
-        });
+        }
+
+        private void writeLastSent(long timestampMs) {
+            if (persistencePath == null) {
+                return;
+            }
+            try {
+                Path parent = persistencePath.getParent();
+                if (parent != null) {
+                    Files.createDirectories(parent);
+                }
+                Path tmp = persistencePath.resolveSibling(persistencePath.getFileName() + ".tmp");
+                Files.writeString(tmp, Long.toString(timestampMs));
+                Files.move(tmp, persistencePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (IOException e) {
+                LOGGER.warn("Could not persist heartbeat timestamp to {}: {}", persistencePath, e.getMessage());
+            }
+        }
     }
 }
