@@ -78,6 +78,13 @@ public class BackendHttpClient {
     }
 
     /**
+     * Server-level auth shorthand for {@link #post(String, String, Type, UUID)}.
+     */
+    public <T> ApiResponse<T> post(String path, String jsonBody, Type responseType) throws BackendException {
+        return post(path, jsonBody, responseType, null);
+    }
+
+    /**
      * Sends a POST request with a JSON body, accepting a generic {@link Type}
      * for parameterised response shapes (e.g. {@code List<TopEntry>}).
      *
@@ -133,6 +140,13 @@ public class BackendHttpClient {
     }
 
     /**
+     * Server-level auth shorthand for {@link #get(String, Type, UUID)}.
+     */
+    public <T> ApiResponse<T> get(String path, Type responseType) throws BackendException {
+        return get(path, responseType, null);
+    }
+
+    /**
      * Sends a GET request, accepting a generic {@link Type} for parameterised
      * response shapes (e.g. {@code List<TopEntry>}).
      *
@@ -143,6 +157,13 @@ public class BackendHttpClient {
                                   @Nullable UUID playerUuid) throws BackendException {
         HttpResponse<String> response = sendWithRetry("GET", path, null, playerUuid);
         return parseResponse(response, responseType);
+    }
+
+    /**
+     * Server-level auth shorthand for {@link #getList(String, Class, UUID)}.
+     */
+    public <T> ApiResponse<List<T>> getList(String path, Class<T> elementType) throws BackendException {
+        return getList(path, elementType, null);
     }
 
     /**
@@ -276,12 +297,15 @@ public class BackendHttpClient {
         }
 
         try {
-            // Envelope-aware: if the body is a JSON object with a `data` key,
-            // deserialise that as T. Otherwise fall back to whole-body parse
-            // (legacy non-enveloped endpoints).
+            // Envelope-aware: if the body is the standard envelope
+            // ({ success, message, playerMessage?, data? }), deserialise
+            // `data` as T. Both `success` and `data` must be present so we
+            // don't accidentally unwrap legacy responses that happen to
+            // expose a domain field called `data`.
             T data;
-            if (root != null && root.has("data") && !root.get("data").isJsonNull()) {
-                data = GSON.fromJson(root.get("data"), responseType);
+            JsonElement dataEl = (root != null && root.has("success")) ? root.get("data") : null;
+            if (dataEl != null && !dataEl.isJsonNull()) {
+                data = GSON.fromJson(dataEl, responseType);
             } else {
                 data = GSON.fromJson(rawBody, responseType);
             }

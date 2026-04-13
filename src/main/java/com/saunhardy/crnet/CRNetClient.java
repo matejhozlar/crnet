@@ -111,6 +111,13 @@ public class CRNetClient {
     }
 
     /**
+     * Server-level auth shorthand for {@link #post(String, String, Type, UUID)}.
+     */
+    public <T> CompletableFuture<ApiResponse<T>> post(String path, String jsonBody, Type responseType) {
+        return post(path, jsonBody, responseType, null);
+    }
+
+    /**
      * Sends a POST and returns the typed response, accepting a generic
      * {@link Type} for parameterised shapes (e.g. {@code List<TopEntry>}).
      */
@@ -137,6 +144,13 @@ public class CRNetClient {
     public <T> CompletableFuture<ApiResponse<T>> get(String path, Class<T> responseType,
                                                      @Nullable UUID playerUuid) {
         return requestQueue.submit(() -> httpClient.get(path, responseType, playerUuid));
+    }
+
+    /**
+     * Server-level auth shorthand for {@link #get(String, Type, UUID)}.
+     */
+    public <T> CompletableFuture<ApiResponse<T>> get(String path, Type responseType) {
+        return get(path, responseType, null);
     }
 
     /**
