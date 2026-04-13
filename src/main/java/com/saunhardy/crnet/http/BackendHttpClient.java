@@ -1,8 +1,10 @@
 package com.saunhardy.crnet.http;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 import com.saunhardy.crnet.auth.TokenException;
 import com.saunhardy.crnet.auth.TokenManager;
 import com.saunhardy.crnet.config.CRNetConfig;
@@ -12,11 +14,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -70,6 +74,22 @@ public class BackendHttpClient {
      */
     public <T> ApiResponse<T> post(String path, String jsonBody, Class<T> responseType,
                                    @Nullable UUID playerUuid) throws BackendException {
+        return post(path, jsonBody, (Type) responseType, playerUuid);
+    }
+
+    /**
+     * Sends a POST request with a JSON body, accepting a generic {@link Type}
+     * for parameterised response shapes (e.g. {@code List<TopEntry>}).
+     *
+     * <p>Use {@link TypeToken#getParameterized(Type, Type...)} to construct
+     * a {@code Type} for a generic class:
+     * <pre>{@code
+     * Type listOfEntries = TypeToken.getParameterized(List.class, TopEntry.class).getType();
+     * ApiResponse<List<TopEntry>> r = client.post("/x", body, listOfEntries, uuid);
+     * }</pre>
+     */
+    public <T> ApiResponse<T> post(String path, String jsonBody, Type responseType,
+                                   @Nullable UUID playerUuid) throws BackendException {
         HttpResponse<String> response = sendWithRetry("POST", path, jsonBody, playerUuid);
         return parseResponse(response, responseType);
     }
@@ -109,8 +129,31 @@ public class BackendHttpClient {
      */
     public <T> ApiResponse<T> get(String path, Class<T> responseType,
                                   @Nullable UUID playerUuid) throws BackendException {
+        return get(path, (Type) responseType, playerUuid);
+    }
+
+    /**
+     * Sends a GET request, accepting a generic {@link Type} for parameterised
+     * response shapes (e.g. {@code List<TopEntry>}).
+     *
+     * <p>Use {@link TypeToken#getParameterized(Type, Type...)} to construct
+     * a {@code Type} for a generic class.
+     */
+    public <T> ApiResponse<T> get(String path, Type responseType,
+                                  @Nullable UUID playerUuid) throws BackendException {
         HttpResponse<String> response = sendWithRetry("GET", path, null, playerUuid);
         return parseResponse(response, responseType);
+    }
+
+    /**
+     * Convenience wrapper for endpoints that return an array as the typed
+     * payload (e.g. {@code GET /api/currency/top}). Equivalent to calling
+     * {@link #get(String, Type, UUID)} with a parameterised {@code List<T>}.
+     */
+    public <T> ApiResponse<List<T>> getList(String path, Class<T> elementType,
+                                            @Nullable UUID playerUuid) throws BackendException {
+        Type listType = TypeToken.getParameterized(List.class, elementType).getType();
+        return get(path, listType, playerUuid);
     }
 
     // ── Internal ─────────────────────────────────────────────────────────
@@ -205,12 +248,24 @@ public class BackendHttpClient {
         return builder.build();
     }
 
-    private <T> ApiResponse<T> parseResponse(HttpResponse<String> response, Class<T> responseType) throws BackendException {
+    private <T> ApiResponse<T> parseResponse(HttpResponse<String> response, Type responseType) throws BackendException {
         int status = response.statusCode();
         String rawBody = response.body();
-        String[] envelope = extractEnvelope(rawBody);
-        String message = envelope[0];
-        String playerMessage = envelope[1];
+
+        // Pre-parse once so we can both extract envelope metadata and
+        // (when present) the typed `data` payload without re-parsing.
+        JsonObject root = null;
+        try {
+            JsonElement parsed = GSON.fromJson(rawBody, JsonElement.class);
+            if (parsed != null && parsed.isJsonObject()) {
+                root = parsed.getAsJsonObject();
+            }
+        } catch (JsonSyntaxException ignored) {
+            // Not JSON — leave root null; envelope fields stay null.
+        }
+
+        String message = readStringField(root, "message");
+        String playerMessage = readStringField(root, "playerMessage");
 
         if (status < 200 || status >= 300) {
             return new ApiResponse<>(status, rawBody, null, rawBody, message, playerMessage);
@@ -221,35 +276,26 @@ public class BackendHttpClient {
         }
 
         try {
-            T data = GSON.fromJson(rawBody, responseType);
+            // Envelope-aware: if the body is a JSON object with a `data` key,
+            // deserialise that as T. Otherwise fall back to whole-body parse
+            // (legacy non-enveloped endpoints).
+            T data;
+            if (root != null && root.has("data") && !root.get("data").isJsonNull()) {
+                data = GSON.fromJson(root.get("data"), responseType);
+            } else {
+                data = GSON.fromJson(rawBody, responseType);
+            }
             return new ApiResponse<>(status, rawBody, data, null, message, playerMessage);
         } catch (JsonSyntaxException e) {
             throw new BackendException("Failed to parse response body: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Extracts {@code message} and {@code playerMessage} from a JSON response body.
-     *
-     * @return a two-element array: {@code [message, playerMessage]} (either may be null)
-     */
-    private String[] extractEnvelope(String rawBody) {
-        String message = null;
-        String playerMessage = null;
-        try {
-            JsonObject json = GSON.fromJson(rawBody, JsonObject.class);
-            if (json != null) {
-                if (json.has("message") && json.get("message").isJsonPrimitive()) {
-                    message = json.get("message").getAsString();
-                }
-                if (json.has("playerMessage") && json.get("playerMessage").isJsonPrimitive()) {
-                    playerMessage = json.get("playerMessage").getAsString();
-                }
-            }
-        } catch (JsonSyntaxException | IllegalStateException e) {
-            // Not JSON — return nulls
-        }
-        return new String[]{message, playerMessage};
+    private static String readStringField(@Nullable JsonObject root, String key) {
+        if (root == null) return null;
+        JsonElement el = root.get(key);
+        if (el == null || el.isJsonNull() || !el.isJsonPrimitive()) return null;
+        return el.getAsString();
     }
 
     private void sleepBackoff(int attempt) {
