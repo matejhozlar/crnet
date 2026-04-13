@@ -117,6 +117,19 @@ HeartbeatHandle heartbeat = client.heartbeat()
 heartbeat.stop();
 ```
 
+`payload(...)` runs the supplier on CRNet's scheduled executor. If your
+payload assembly reads thread-confined state (Minecraft/OPAC APIs on the
+server thread), use `payloadOn(...)` to dispatch the build onto a specific
+executor — `MinecraftServer` already implements `Executor`:
+
+```java
+HeartbeatHandle heartbeat = client.heartbeat()
+        .endpoint("/api/forceloads/sync")
+        .interval(5, TimeUnit.MINUTES)
+        .payloadOn(server, () -> buildPayloadJson(server))
+        .start();
+```
+
 ### Token cleanup
 
 Invalidate cached tokens when a player disconnects:
