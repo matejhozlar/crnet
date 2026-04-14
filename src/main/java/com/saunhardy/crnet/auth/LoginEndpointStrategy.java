@@ -1,6 +1,7 @@
 package com.saunhardy.crnet.auth;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.saunhardy.crnet.config.CRNetConfig;
@@ -101,7 +102,10 @@ public class LoginEndpointStrategy implements AuthStrategy {
             }
 
             JsonObject obj = JsonParser.parseString(response.body()).getAsJsonObject();
-            String token = obj.get("token").getAsString();
+            String token = extractToken(obj);
+            if (token == null) {
+                throw new TokenException("Login endpoint response did not contain a token: " + response.body());
+            }
 
             long now = System.currentTimeMillis();
             tokenCache.put(playerUuid, token);
@@ -113,6 +117,27 @@ public class LoginEndpointStrategy implements AuthStrategy {
         } catch (Exception e) {
             throw new TokenException("Failed to fetch token from login endpoint: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Pulls {@code token} from the login response. Prefers the enveloped
+     * shape ({@code { success, message, data: { token } }}) used by the
+     * Createrington backend; falls back to a top-level {@code token} so
+     * non-enveloped login endpoints keep working.
+     */
+    private static String extractToken(JsonObject obj) {
+        JsonElement dataEl = obj.get("data");
+        if (dataEl != null && dataEl.isJsonObject()) {
+            JsonElement dataToken = dataEl.getAsJsonObject().get("token");
+            if (dataToken != null && dataToken.isJsonPrimitive()) {
+                return dataToken.getAsString();
+            }
+        }
+        JsonElement tokenEl = obj.get("token");
+        if (tokenEl != null && tokenEl.isJsonPrimitive()) {
+            return tokenEl.getAsString();
+        }
+        return null;
     }
 
     private void evictExpiredTokens() {
