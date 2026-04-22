@@ -76,21 +76,4 @@ public class RequestQueue {
         }
         return future;
     }
-
-    /**
-     * Shuts down the executor gracefully, waiting up to 5 seconds for in-flight
-     * requests to complete. Called automatically on server stop.
-     */
-    public void shutdown() {
-        executor.shutdown();
-        try {
-            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                executor.shutdownNow();
-                LOGGER.warn("CRNet request queue did not drain cleanly within 5 s");
-            }
-        } catch (InterruptedException e) {
-            executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-    }
 }
