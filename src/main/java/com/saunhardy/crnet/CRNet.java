@@ -3,13 +3,10 @@ package com.saunhardy.crnet;
 import com.saunhardy.crnet.config.CRNetConfig;
 import com.saunhardy.crnet.queue.RequestQueue;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,10 +32,11 @@ public class CRNet {
     public CRNet(IEventBus modEventBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.COMMON, CRNetConfig.SPEC);
         modEventBus.addListener(this::commonSetup);
-        NeoForge.EVENT_BUS.register(this);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
+        // Shared infrastructure is mod-lifetime: it is created once here and never torn down,
+        // so consumers can build CRNetClients across multiple server sessions in the same JVM.
         sharedHttpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)   // explicit — do not change without a version bump
                 .connectTimeout(Duration.ofMillis(CRNetConfig.CONNECT_TIMEOUT_MS.get()))
@@ -46,16 +44,6 @@ public class CRNet {
 
         requestQueue = new RequestQueue(CRNetConfig.THREAD_POOL_SIZE.get(), CRNetConfig.QUEUE_CAPACITY.get());
         LOGGER.info("CRNet initialised");
-    }
-
-    @SubscribeEvent
-    public void onServerStopping(ServerStoppingEvent event) {
-        LOGGER.info("Server stopping — shutting down CRNet");
-        if (requestQueue != null) requestQueue.shutdown();
-        if (sharedHttpClient != null) {
-            sharedHttpClient.close();
-            sharedHttpClient = null;
-        }
     }
 
     /**
