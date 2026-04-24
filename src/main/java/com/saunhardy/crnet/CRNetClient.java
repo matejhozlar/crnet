@@ -1,8 +1,6 @@
 package com.saunhardy.crnet;
 
-import com.saunhardy.crnet.auth.AuthConfig;
 import com.saunhardy.crnet.auth.AuthStrategy;
-import com.saunhardy.crnet.auth.LoginEndpointAuthConfig;
 import com.saunhardy.crnet.auth.TokenManager;
 import com.saunhardy.crnet.http.ApiResponse;
 import com.saunhardy.crnet.http.BackendHttpClient;
@@ -213,7 +211,7 @@ public class CRNetClient {
     public static class Builder {
 
         private String baseUrl;
-        private AuthConfig authConfig = AuthStrategy.none();
+        private AuthStrategy authStrategy = AuthStrategy.none();
 
         /**
          * Sets the base URL for all requests made by this client.
@@ -226,16 +224,14 @@ public class CRNetClient {
         }
 
         /**
-         * Sets the auth configuration for this client.
-         * <p>
-         * Accepts either an {@link AuthStrategy} (from static factories like
-         * {@link AuthStrategy#selfSignedJwt(String)}) or a {@link LoginEndpointAuthConfig}
-         * (from {@link AuthStrategy#loginEndpoint(String)}).
+         * Sets the auth strategy for this client.
          *
-         * @param config an {@link AuthConfig} instance
+         * @param strategy an {@link AuthStrategy} instance (obtain via
+         *                 {@link AuthStrategy#selfSignedJwt(String)},
+         *                 {@link AuthStrategy#selfSignedJwt(String, int, String)}, etc.)
          */
-        public Builder auth(AuthConfig config) {
-            this.authConfig = config;
+        public Builder auth(AuthStrategy strategy) {
+            this.authStrategy = strategy;
             return this;
         }
 
@@ -256,17 +252,7 @@ public class CRNetClient {
                 throw new IllegalStateException("CRNet has not been initialised — ensure the mod is loaded and commonSetup has completed");
             }
 
-            AuthStrategy strategy;
-            if (authConfig instanceof LoginEndpointAuthConfig loginConfig) {
-                strategy = loginConfig.create(sharedHttpClient, baseUrl);
-            } else if (authConfig instanceof AuthStrategy authStrategy) {
-                strategy = authStrategy;
-            }  else {
-                // Unreachable — AuthConfig is sealed to AuthStrategy and LoginEndpointAuthConfig
-                throw new AssertionError("Unknown AuthConfig type: " + authConfig.getClass());
-            }
-
-            TokenManager tokenManager = new TokenManager(strategy);
+            TokenManager tokenManager = new TokenManager(authStrategy);
             BackendHttpClient httpClient = new BackendHttpClient(baseUrl, tokenManager, sharedHttpClient);
 
             return new CRNetClient(httpClient, tokenManager, requestQueue);
