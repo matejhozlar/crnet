@@ -23,7 +23,7 @@ import java.util.function.Function;
  */
 class SelfSignedJwtStrategy implements AuthStrategy {
 
-    private final String secret;
+    private final SecretKey signingKey;
     private final int ttlSeconds;
     private final @Nullable String audience;
     private final @Nullable Function<UUID, String> nameResolver;
@@ -35,7 +35,7 @@ class SelfSignedJwtStrategy implements AuthStrategy {
         if (secret == null || secret.isBlank()) {
             throw new IllegalArgumentException("JWT secret must not be null or blank");
         }
-        this.secret = secret;
+        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.ttlSeconds = ttlSeconds;
         this.audience = audience;
         this.nameResolver = nameResolver;
@@ -46,7 +46,6 @@ class SelfSignedJwtStrategy implements AuthStrategy {
         long nowMs = System.currentTimeMillis();
 
         try {
-            SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
             JwtBuilder builder = Jwts.builder()
                     .issuedAt(new Date(nowMs))
                     .expiration(new Date(nowMs + ttlSeconds * 1_000L));
@@ -57,17 +56,26 @@ class SelfSignedJwtStrategy implements AuthStrategy {
 
             if (playerUuid != null) {
                 builder.claim("uuid", playerUuid.toString());
-                if (nameResolver != null) {
-                    String name = nameResolver.apply(playerUuid);
-                    if (name != null && !name.isBlank()) {
-                        builder.claim("name", name);
-                    }
+                String name = resolveName(playerUuid);
+                if (name != null && !name.isBlank()) {
+                    builder.claim("name", name);
                 }
             }
 
-            return builder.signWith(key, Jwts.SIG.HS256).compact();
+            return builder.signWith(signingKey, Jwts.SIG.HS256).compact();
+        } catch (TokenException e) {
+            throw e;
         } catch (Exception e) {
             throw new TokenException("Failed to generate self-signed JWT", e);
+        }
+    }
+
+    private @Nullable String resolveName(UUID playerUuid) throws TokenException {
+        if (nameResolver == null) return null;
+        try {
+            return nameResolver.apply(playerUuid);
+        } catch (Exception e) {
+            throw new TokenException("Name resolver failed for player " + playerUuid, e);
         }
     }
 
