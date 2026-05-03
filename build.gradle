@@ -62,7 +62,7 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-gson:0.12.5'
 
-    api 'com.saunhardy:createrington-api:1.9.0'
+    api 'com.saunhardy:createrington-api:1.10.0'
 
     jarJar('io.jsonwebtoken:jjwt-api') {
         version {
@@ -84,8 +84,8 @@ dependencies {
     }
     jarJar('com.saunhardy:createrington-api') {
         version {
-            strictly '[1.9.0, 2.0.0)'
-            prefer '1.9.0'
+            strictly '[1.10.0, 2.0.0)'
+            prefer '1.10.0'
         }
     }
 }
