@@ -293,7 +293,7 @@ public class BackendHttpClient {
         }
 
         if (responseType == Void.class || responseType == void.class) {
-            return new ApiResponse<>(status, rawBody, null, null, message, playerMessage);
+            return new ApiResponse<>(status, null, null, null, message, playerMessage);
         }
 
         try {
@@ -309,7 +309,7 @@ public class BackendHttpClient {
             } else {
                 data = GSON.fromJson(rawBody, responseType);
             }
-            return new ApiResponse<>(status, rawBody, data, null, message, playerMessage);
+            return new ApiResponse<>(status, null, data, null, message, playerMessage);
         } catch (JsonSyntaxException e) {
             throw new BackendException("Failed to parse response body: " + e.getMessage(), e);
         }

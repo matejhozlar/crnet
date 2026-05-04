@@ -17,13 +17,13 @@ import org.jetbrains.annotations.Nullable;
 public class ApiResponse<T> {
 
     private final int statusCode;
-    private final String rawBody;
+    @Nullable private final String rawBody;
     @Nullable private final T data;
     @Nullable private final String error;
     @Nullable private final String message;
     @Nullable private final String playerMessage;
 
-    public ApiResponse(int statusCode, String rawBody, @Nullable T data,
+    public ApiResponse(int statusCode, @Nullable String rawBody, @Nullable T data,
                        @Nullable String error, @Nullable String message,
                        @Nullable String playerMessage) {
         this.statusCode = statusCode;
@@ -35,7 +35,13 @@ public class ApiResponse<T> {
     }
 
     public int getStatusCode() { return statusCode; }
-    public String getRawBody() { return rawBody; }
+
+    /**
+     * The unparsed response body. Populated on error responses (status &lt; 200 or
+     * &gt;= 300) for diagnostics; {@code null} on success to avoid retaining the
+     * payload alongside the deserialised {@link #getData() data}.
+     */
+    @Nullable public String getRawBody() { return rawBody; }
     @Nullable public T getData() { return data; }
     @Nullable public String getError() { return error; }
 
