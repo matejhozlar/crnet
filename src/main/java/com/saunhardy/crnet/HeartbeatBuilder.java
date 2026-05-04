@@ -177,7 +177,9 @@ public class HeartbeatBuilder {
 
         LOGGER.info("Heartbeat started: endpoint={}, interval={}ms, initialDelay={}ms",
                 endpoint, intervalMs, initialDelayMs);
-        return new HeartbeatHandle(scheduler, task);
+        HeartbeatHandle handle = new HeartbeatHandle(scheduler, task);
+        CRNet.registerHeartbeat(handle);
+        return handle;
     }
 
     /**

@@ -7,11 +7,17 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * CRNet mod bootstrap.
@@ -29,9 +35,15 @@ public class CRNet {
     private static HttpClient sharedHttpClient;
     private static RequestQueue requestQueue;
 
+    // Safety net for heartbeats whose owning mod forgets to call stop() on shutdown.
+    // Consumers are still expected to call HeartbeatHandle.stop() themselves; this
+    // registry only catches misses to keep daemon threads from outliving the server.
+    private static final Set<HeartbeatHandle> ACTIVE_HEARTBEATS = ConcurrentHashMap.newKeySet();
+
     public CRNet(IEventBus modEventBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.COMMON, CRNetConfig.SPEC);
         modEventBus.addListener(this::commonSetup);
+        NeoForge.EVENT_BUS.addListener(this::onServerStopping);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
@@ -44,6 +56,22 @@ public class CRNet {
 
         requestQueue = new RequestQueue(CRNetConfig.THREAD_POOL_SIZE.get(), CRNetConfig.QUEUE_CAPACITY.get());
         LOGGER.info("CRNet initialised");
+    }
+
+    private void onServerStopping(ServerStoppingEvent event) {
+        // Snapshot to avoid CME — handle.stop() deregisters itself from ACTIVE_HEARTBEATS.
+        List<HeartbeatHandle> snapshot = new ArrayList<>(ACTIVE_HEARTBEATS);
+        if (snapshot.isEmpty()) {
+            return;
+        }
+        LOGGER.info("Stopping {} active heartbeat(s) on server shutdown", snapshot.size());
+        for (HeartbeatHandle handle : snapshot) {
+            try {
+                handle.stop();
+            } catch (Exception e) {
+                LOGGER.warn("Error stopping heartbeat: {}", e.getMessage());
+            }
+        }
     }
 
     /**
@@ -60,5 +88,13 @@ public class CRNet {
      */
     static RequestQueue getRequestQueue() {
         return requestQueue;
+    }
+
+    static void registerHeartbeat(HeartbeatHandle handle) {
+        ACTIVE_HEARTBEATS.add(handle);
+    }
+
+    static void unregisterHeartbeat(HeartbeatHandle handle) {
+        ACTIVE_HEARTBEATS.remove(handle);
     }
 }
